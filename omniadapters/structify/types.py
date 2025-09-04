@@ -3,15 +3,7 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Protocol,
-    Self,
-    TypeAlias,
-    TypeVar,
-    runtime_checkable,
-)
+from typing import TYPE_CHECKING, Any, Protocol, Self, TypeAlias, TypeVar, runtime_checkable
 
 from pydantic import BaseModel
 
@@ -26,10 +18,7 @@ StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
 BaseProviderConfigT = TypeVar("BaseProviderConfigT", bound="BaseProviderConfig")
 ClientT = TypeVar("ClientT")
 CompletionClientParamsT = TypeVar("CompletionClientParamsT", bound="CompletionClientParams")
-ClientResponseT = TypeVar(
-    "ClientResponseT",
-    bound="ChatCompletion | AnthropicResponse | GenerateContentResponse",
-)
+ClientResponseT = TypeVar("ClientResponseT", bound="ChatCompletion | AnthropicResponse | GenerateContentResponse")
 
 MessageParam: TypeAlias = dict[str, Any]
 

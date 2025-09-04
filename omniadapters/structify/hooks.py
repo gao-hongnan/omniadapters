@@ -43,10 +43,7 @@ def _setup_hooks(
 
         # NOTE: Gemini Content objects are not serializable, so we convert them to dicts what......?
         if messages and hasattr(messages[0], "model_dump"):
-            messages = [
-                msg.model_dump() if hasattr(msg, "model_dump") else msg
-                for msg in messages
-            ]
+            messages = [msg.model_dump() if hasattr(msg, "model_dump") else msg for msg in messages]
 
         captured.messages = messages
 
@@ -159,12 +156,8 @@ async def ahook_instructor(
 
 
 # NOTE: Import response types for model rebuild - these are needed at runtime when CompletionTrace.model_rebuild() is called!
-from anthropic.types import (
-    Message as AnthropicResponse,
-)  # noqa: E402, F401 # type: ignore
-from google.genai.types import (
-    GenerateContentResponse,
-)  # noqa: E402, F401 # type: ignore
+from anthropic.types import Message as AnthropicResponse  # noqa: E402, F401 # type: ignore
+from google.genai.types import GenerateContentResponse  # noqa: E402, F401 # type: ignore
 from openai.types.chat import ChatCompletion  # noqa: E402, F401 # type: ignore
 
 # NOTE: Rebuild the model to resolve forward references

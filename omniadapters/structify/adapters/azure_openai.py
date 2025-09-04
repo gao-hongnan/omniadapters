@@ -8,9 +8,7 @@ from omniadapters.structify.adapters.base import BaseAdapter
 from omniadapters.structify.models import AzureOpenAIProviderConfig
 
 
-class AzureOpenAIAdapter(
-    BaseAdapter[AzureOpenAIProviderConfig, AsyncAzureOpenAI, ChatCompletion]
-):
+class AzureOpenAIAdapter(BaseAdapter[AzureOpenAIProviderConfig, AsyncAzureOpenAI, ChatCompletion]):
     def _create_client(self) -> AsyncAzureOpenAI:
         return AsyncAzureOpenAI(**self.provider_config.model_dump())
 

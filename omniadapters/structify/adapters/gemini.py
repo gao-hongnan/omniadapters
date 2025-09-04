@@ -16,9 +16,7 @@ if TYPE_CHECKING:
     from omniadapters.structify.models import CompletionResult
 
 
-class GeminiAdapter(
-    BaseAdapter[GeminiProviderConfig, genai.Client, GenerateContentResponse]
-):
+class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateContentResponse]):
     def _create_client(self) -> genai.Client:
         return genai.Client(api_key=self.provider_config.api_key)
 
@@ -56,14 +54,9 @@ class GeminiAdapter(
         response_model: type[StructuredResponseT],
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> (
-        StructuredResponseT
-        | CompletionResult[StructuredResponseT, GenerateContentResponse]
-    ):
+    ) -> StructuredResponseT | CompletionResult[StructuredResponseT, GenerateContentResponse]:
         model = self.completion_params.model
-        config = GenerateContentConfig(
-            **self.completion_params.model_dump(exclude={"model"})
-        )
+        config = GenerateContentConfig(**self.completion_params.model_dump(exclude={"model"}))
 
         captured: CompletionTrace[GenerateContentResponse]
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
@@ -83,14 +76,9 @@ class GeminiAdapter(
         response_model: type[StructuredResponseT],
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> AsyncIterator[
-        StructuredResponseT
-        | CompletionResult[StructuredResponseT, GenerateContentResponse]
-    ]:
+    ) -> AsyncIterator[StructuredResponseT | CompletionResult[StructuredResponseT, GenerateContentResponse]]:
         model = self.completion_params.model
-        config = GenerateContentConfig(
-            **self.completion_params.model_dump(exclude={"model"})
-        )
+        config = GenerateContentConfig(**self.completion_params.model_dump(exclude={"model"}))
 
         captured: CompletionTrace[GenerateContentResponse]
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:

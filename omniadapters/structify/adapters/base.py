@@ -129,9 +129,7 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ClientResponseT]):
         response_model: type[StructuredResponseT],
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> AsyncIterator[
-        StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]
-    ]:
+    ) -> AsyncIterator[StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]]:
         return self._astream(messages, response_model, with_hooks, **kwargs)
 
     async def _astream(
@@ -140,9 +138,7 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ClientResponseT]):
         response_model: type[StructuredResponseT],
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> AsyncIterator[
-        StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]
-    ]:
+    ) -> AsyncIterator[StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]]:
         captured: CompletionTrace[ClientResponseT]
         completion_kwargs = {**self.completion_params.model_dump(), **kwargs}
 

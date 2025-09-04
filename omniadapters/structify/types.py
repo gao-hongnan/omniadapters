@@ -25,9 +25,7 @@ if TYPE_CHECKING:
 StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
 BaseProviderConfigT = TypeVar("BaseProviderConfigT", bound="BaseProviderConfig")
 ClientT = TypeVar("ClientT")
-CompletionClientParamsT = TypeVar(
-    "CompletionClientParamsT", bound="CompletionClientParams"
-)
+CompletionClientParamsT = TypeVar("CompletionClientParamsT", bound="CompletionClientParams")
 ClientResponseT = TypeVar(
     "ClientResponseT",
     bound="ChatCompletion | AnthropicResponse | GenerateContentResponse",

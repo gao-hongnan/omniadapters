@@ -1,0 +1,5 @@
+format: jb-book
+root: intro
+chapters:
+- file: structify
+  title: "Structify: Type-Safe LLM Adapters"

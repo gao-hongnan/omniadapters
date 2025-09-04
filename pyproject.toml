@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omniadapters"
-version = "4.0.0"
+version = "5.0.0"
 description = "A collection of code for omniadapters - unified interfaces for LLM providers."
 authors = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
 maintainers = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
@@ -48,11 +48,6 @@ dependencies = [
 
 [project.optional-dependencies]
 playground = [
-    "rich>=13.12.0",
-    "typer>=0.15.1",
-    "python-dotenv>=1.0.1",
-]
-all = [
     "rich>=13.12.0",
     "typer>=0.15.1",
     "python-dotenv>=1.0.1",
@@ -151,8 +146,6 @@ exclude = [
 
 [tool.uv]
 managed = true
-
-[tool.uv.sources]
 
 [tool.bandit]
 exclude_dirs = [

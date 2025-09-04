@@ -757,7 +757,7 @@ wheels = [
 
 [[package]]
 name = "instructor"
-version = "1.10.0"
+version = "1.11.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -773,9 +773,9 @@ dependencies = [
     { name = "tenacity" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a5/67/63c4b4d2cc3c7b4238920ad3388a6f5d67265ab7c09ee34012d6b591130e/instructor-1.10.0.tar.gz", hash = "sha256:887d33e058b913290dbf526b0096b1bb8d7ea1a07d75afecbf716161f959697b", size = 69388981 }
+sdist = { url = "https://files.pythonhosted.org/packages/64/17/802d1dc4484410b65249e9d3c95a751b9c05dc106f1dff2e4a601c063ecd/instructor-1.11.2.tar.gz", hash = "sha256:e9ad4e2e0450a0840720bd2be034ffdfd7a65262ebdb854e7b2969886e1a2576", size = 69867645 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2c/fb/ffc1ade9779795a8dc8e2379b1bfb522161ee7df8df12722f50d348fb4ea/instructor-1.10.0-py3-none-any.whl", hash = "sha256:9c789f0fce915d5498059afb5314530c8a5b22b0283302679148ddae98f732b0", size = 119455 },
+    { url = "https://files.pythonhosted.org/packages/25/93/d514a35d01db8461a56798c53f715ee1c956e72ec8885de88779b1244f2c/instructor-1.11.2-py3-none-any.whl", hash = "sha256:f7bc1094bcb7c6494d53ff284fe6a6737eb5e343945693c198e253ee7496fe82", size = 148884 },
 ]
 
 [[package]]
@@ -905,6 +905,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d8/b3/2bd02071c5a2430d0b70403a34411fc519c2f227da7b03da9ba6a956f931/jiter-0.10.0-cp314-cp314-win32.whl", hash = "sha256:ac509f7eccca54b2a29daeb516fb95b6f0bd0d0d8084efaf8ed5dfc7b9f0b357", size = 210127 },
     { url = "https://files.pythonhosted.org/packages/03/0c/5fe86614ea050c3ecd728ab4035534387cd41e7c1855ef6c031f1ca93e3f/jiter-0.10.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:5ed975b83a2b8639356151cef5c0d597c68376fc4922b45d0eb384ac058cfa00", size = 318527 },
     { url = "https://files.pythonhosted.org/packages/b3/4a/4175a563579e884192ba6e81725fc0448b042024419be8d83aa8a80a3f44/jiter-0.10.0-cp314-cp314t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3aa96f2abba33dc77f79b4cf791840230375f9534e5fac927ccceb58c5e604a5", size = 354213 },
+]
+
+[[package]]
+name = "jsonref"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/0d/c1f3277e90ccdb50d33ed5ba1ec5b3f0a242ed8c1b1a85d3afeb68464dca/jsonref-1.1.0.tar.gz", hash = "sha256:32fe8e1d85af0fdefbebce950af85590b22b60f9e95443176adbde4e1ecea552", size = 8814 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/ec/e1db9922bceb168197a558a2b8c03a7963f1afe93517ddd3cf99f202f996/jsonref-1.1.0-py3-none-any.whl", hash = "sha256:590dc7773df6c21cbf948b5dac07a72a251db28b0238ceecce0a2abfa8ec30a9", size = 9425 },
 ]
 
 [[package]]
@@ -1308,23 +1317,19 @@ wheels = [
 
 [[package]]
 name = "omniadapters"
-version = "2.0.0"
+version = "5.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
     { name = "google-genai" },
     { name = "instructor" },
+    { name = "jsonref" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
 ]
 
 [package.optional-dependencies]
-all = [
-    { name = "python-dotenv" },
-    { name = "rich" },
-    { name = "typer" },
-]
 playground = [
     { name = "python-dotenv" },
     { name = "rich" },
@@ -1394,17 +1399,15 @@ requires-dist = [
     { name = "anthropic", specifier = ">=0.59.0" },
     { name = "google-genai", specifier = ">=1.27.0" },
     { name = "instructor", specifier = ">=1.10.0" },
+    { name = "jsonref", specifier = ">=1.1.0" },
     { name = "openai", specifier = ">=1.97.1" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
-    { name = "python-dotenv", marker = "extra == 'all'", specifier = ">=1.0.1" },
     { name = "python-dotenv", marker = "extra == 'playground'", specifier = ">=1.0.1" },
-    { name = "rich", marker = "extra == 'all'", specifier = ">=13.12.0" },
     { name = "rich", marker = "extra == 'playground'", specifier = ">=13.12.0" },
-    { name = "typer", marker = "extra == 'all'", specifier = ">=0.15.1" },
     { name = "typer", marker = "extra == 'playground'", specifier = ">=0.15.1" },
 ]
-provides-extras = ["playground", "all"]
+provides-extras = ["playground"]
 
 [package.metadata.requires-dev]
 dev = [

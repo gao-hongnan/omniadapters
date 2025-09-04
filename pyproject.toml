@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omniadapters"
-version = "3.0.0"
+version = "4.0.0"
 description = "A collection of code for omniadapters - unified interfaces for LLM providers."
 authors = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
 maintainers = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
@@ -43,6 +43,7 @@ dependencies = [
     "google-genai>=1.27.0",
     "openai>=1.97.1",
     "instructor>=1.10.0",
+    "jsonref>=1.1.0",
 ]
 
 [project.optional-dependencies]

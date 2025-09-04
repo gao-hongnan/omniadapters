@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any, Generic, Protocol
 
 import instructor
-from instructor.hooks import HookName
+from instructor.core.hooks import HookName
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:

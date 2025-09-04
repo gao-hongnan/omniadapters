@@ -201,20 +201,25 @@ This is the most critical step. The system now spawns _new, independent LLM
 calls_ to answer each question from Stage 2. Crucially, these calls do not see
 the original draft, preventing it from "contaminating" their answers.
 
-> **Q1:** "Did Dorothy Hodgkin win two Nobel Prizes?" **A1:** "No, Dorothy
-> Hodgkin won one Nobel Prize."
+> **Q1:** Did Dorothy Hodgkin win two Nobel Prizes?
+> 
+> **A1:** No, Dorothy Hodgkin won one Nobel Prize.
 >
-> **Q2:** "In which years and fields did Dorothy Hodgkin win Nobel Prizes?"
-> **A2:** "Dorothy Hodgkin won the Nobel Prize in Chemistry in 1964."
+> **Q2:** In which years and fields did Dorothy Hodgkin win Nobel Prizes?
+> 
+> **A2:** Dorothy Hodgkin won the Nobel Prize in Chemistry in 1964.
 >
-> **Q3:** "Did Dorothy Hodgkin win a Nobel Prize in Physiology or Medicine?"
-> **A3:** "No, her Nobel Prize was in Chemistry."
+> **Q3:** Did Dorothy Hodgkin win a Nobel Prize in Physiology or Medicine?
+> 
+> **A3:** No, her Nobel Prize was in Chemistry.
 >
-> **Q4:** "Has any woman won two Nobel Prizes in different scientific fields?"
-> **A4:** "Yes, Marie Curie."
+> **Q4:** Has any woman won two Nobel Prizes in different scientific fields?
+> 
+> **A4:** Yes, Marie Curie.
 >
-> **Q5:** "If so, who was it and in what fields?" **A5:** "Marie Curie won the
-> Nobel Prize in Physics in 1903 and the Nobel Prize in Chemistry in 1911."
+> **Q5:** If so, who was it and in what fields?
+> 
+> **A5:** Marie Curie won the Nobel Prize in Physics in 1903 and the Nobel Prize in Chemistry in 1911.
 
 ### Stage 4: The Synthesis (The Final Verdict)
 
@@ -228,9 +233,10 @@ final judgment.
 >     scientific fields?"
 > -   **Draft Answer:** "Dorothy Hodgkin..."
 > -   **Verification Log:**
->     -   Q: Did Hodgkin win two? A: No, only one.
->     -   Q: Did any woman win two in different fields? A: Yes, Marie Curie
->         (Physics 1903, Chemistry 1911).
+>     -   **Q:** Did Hodgkin win two?
+>         **A:** No, only one.
+>     -   **Q:** Did any woman win two in different fields?
+>         **A:** Yes, Marie Curie (Physics 1903, Chemistry 1911).
 >
 > **Final Corrected Answer:** "The first woman to win two Nobel Prizes in
 > different scientific fields was **Marie Curie**. She received the Nobel Prize
@@ -485,10 +491,13 @@ if __name__ == "__main__":
 🔍 Verification Log:
    Q: Did Dorothy Hodgkin win two Nobel Prizes?
    A: No, Dorothy Hodgkin won only one Nobel Prize.
+   
    Q: What was the year and field for Dorothy Hodgkin's Nobel Prize win?
    A: Dorothy Hodgkin won the Nobel Prize in Chemistry in 1964.
+   
    Q: Did Dorothy Hodgkin win a Nobel Prize in Physiology or Medicine?
    A: No, her Nobel Prize was in the field of Chemistry.
+   
    Q: Who was the first woman to win two Nobel Prizes in different fields?
    A: Marie Curie was the first woman to win two Nobel Prizes in different fields, Physics in 1903 and Chemistry in 1911.
 

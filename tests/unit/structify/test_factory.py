@@ -5,20 +5,20 @@ from typing import Literal, cast
 import instructor
 import pytest
 
-from omniadapters.structify import create_adapter
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import (
+from omniadapters.core.models import (
     AnthropicCompletionClientParams,
     AnthropicProviderConfig,
     BaseProviderConfig,
     GeminiCompletionClientParams,
     GeminiProviderConfig,
-    InstructorConfig,
     OpenAICompletionClientParams,
     OpenAIProviderConfig,
 )
+from omniadapters.structify import create_adapter
+from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+from omniadapters.structify.adapters.gemini import GeminiAdapter
+from omniadapters.structify.adapters.openai import OpenAIAdapter
+from omniadapters.structify.models import InstructorConfig
 
 
 @pytest.mark.unit

@@ -11,20 +11,19 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel
 
+from omniadapters.core.models import (
+    AnthropicCompletionClientParams,
+    AnthropicProviderConfig,
+    GeminiCompletionClientParams,
+    GeminiProviderConfig,
+    OpenAICompletionClientParams,
+    OpenAIProviderConfig,
+)
 from omniadapters.structify.adapters.anthropic import AnthropicAdapter
 from omniadapters.structify.adapters.base import BaseAdapter
 from omniadapters.structify.adapters.gemini import GeminiAdapter
 from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import (
-    AnthropicCompletionClientParams,
-    AnthropicProviderConfig,
-    CompletionResult,
-    GeminiCompletionClientParams,
-    GeminiProviderConfig,
-    InstructorConfig,
-    OpenAICompletionClientParams,
-    OpenAIProviderConfig,
-)
+from omniadapters.structify.models import CompletionResult, InstructorConfig
 
 
 class SampleModel(BaseModel):

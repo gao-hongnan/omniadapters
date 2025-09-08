@@ -9,12 +9,12 @@ import instructor
 import pytest
 from openai import AsyncOpenAI
 
-from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import (
-    InstructorConfig,
+from omniadapters.core.models import (
     OpenAICompletionClientParams,
     OpenAIProviderConfig,
 )
+from omniadapters.structify.adapters.openai import OpenAIAdapter
+from omniadapters.structify.models import InstructorConfig
 
 
 @pytest.mark.unit

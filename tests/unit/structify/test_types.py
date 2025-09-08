@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 from pydantic import BaseModel
 
@@ -12,9 +10,6 @@ from omniadapters.structify.types import (
     ClientT,
     StructuredResponseT,
 )
-
-if TYPE_CHECKING:
-    pass
 
 
 class SampleModel(BaseModel):
@@ -203,8 +198,7 @@ class TestTypeDefinitions:
         for export in expected_type_exports:
             assert hasattr(types, export), f"Missing export in types.py: {export}"
 
-        # Check that enums are now in enums.py
-        from omniadapters.structify import enums
+        from omniadapters.core import enums
 
         expected_enum_exports = [
             "Provider",

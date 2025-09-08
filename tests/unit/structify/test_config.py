@@ -7,20 +7,18 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from omniadapters.core.enums import Capability, Provider
-from omniadapters.structify.hooks import CompletionTrace
-from omniadapters.structify.models import (
-    Allowable,
+from omniadapters.core.models import (
     AnthropicCompletionClientParams,
     AnthropicProviderConfig,
     CompletionClientParams,
-    CompletionResult,
     GeminiCompletionClientParams,
     GeminiProviderConfig,
-    InstructorConfig,
     OpenAICompletionClientParams,
     OpenAIProviderConfig,
     ProviderConfig,
 )
+from omniadapters.structify.hooks import CompletionTrace
+from omniadapters.structify.models import Allowable, CompletionResult, InstructorConfig
 
 
 @pytest.mark.unit

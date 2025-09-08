@@ -4,8 +4,8 @@ import instructor
 from openai import AsyncAzureOpenAI
 from openai.types.chat import ChatCompletion
 
+from omniadapters.core.models import AzureOpenAIProviderConfig
 from omniadapters.structify.adapters.base import BaseAdapter
-from omniadapters.structify.models import AzureOpenAIProviderConfig
 
 
 class AzureOpenAIAdapter(BaseAdapter[AzureOpenAIProviderConfig, AsyncAzureOpenAI, ChatCompletion]):

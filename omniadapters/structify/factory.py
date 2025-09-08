@@ -2,27 +2,27 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never, overload
 
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.azure_openai import AzureOpenAIAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import (
+from omniadapters.core.models import (
     AnthropicProviderConfig,
     AzureOpenAIProviderConfig,
     GeminiProviderConfig,
     OpenAIProviderConfig,
 )
+from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+from omniadapters.structify.adapters.azure_openai import AzureOpenAIAdapter
+from omniadapters.structify.adapters.gemini import GeminiAdapter
+from omniadapters.structify.adapters.openai import OpenAIAdapter
 
 if TYPE_CHECKING:
-    from omniadapters.structify.models import (
+    from omniadapters.core.models import (
         AnthropicCompletionClientParams,
         AzureOpenAICompletionClientParams,
         CompletionClientParams,
         GeminiCompletionClientParams,
-        InstructorConfig,
         OpenAICompletionClientParams,
         ProviderConfig,
     )
+    from omniadapters.structify.models import InstructorConfig
 
 
 @overload

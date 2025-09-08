@@ -4,8 +4,8 @@ import instructor
 from anthropic import AsyncAnthropic
 from anthropic.types import Message as AnthropicResponse
 
+from omniadapters.core.models import AnthropicProviderConfig
 from omniadapters.structify.adapters.base import BaseAdapter
-from omniadapters.structify.models import AnthropicProviderConfig
 
 
 class AnthropicAdapter(BaseAdapter[AnthropicProviderConfig, AsyncAnthropic, AnthropicResponse]):

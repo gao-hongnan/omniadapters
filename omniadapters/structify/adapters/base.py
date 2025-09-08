@@ -19,8 +19,9 @@ from omniadapters.structify.types import (
 )
 
 if TYPE_CHECKING:
+    from omniadapters.core.models import CompletionClientParams
     from omniadapters.structify.hooks import CompletionTrace
-    from omniadapters.structify.models import CompletionClientParams, CompletionResult, InstructorConfig
+    from omniadapters.structify.models import CompletionResult, InstructorConfig
 
 
 class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ClientResponseT]):

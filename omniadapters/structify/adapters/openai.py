@@ -4,8 +4,8 @@ import instructor
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
 
+from omniadapters.core.models import OpenAIProviderConfig
 from omniadapters.structify.adapters.base import BaseAdapter
-from omniadapters.structify.models import OpenAIProviderConfig
 
 
 class OpenAIAdapter(BaseAdapter[OpenAIProviderConfig, AsyncOpenAI, ChatCompletion]):

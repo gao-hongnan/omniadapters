@@ -1,15 +1,15 @@
 from openai.types.chat import ChatCompletionMessageParam
 
-from omniadapters.structify.factory import create_adapter
-from omniadapters.structify.hooks import CompletionTrace
-from omniadapters.structify.models import (
+from omniadapters.core.models import (
     AnthropicProviderConfig,
     AzureOpenAIProviderConfig,
-    CompletionResult,
     GeminiProviderConfig,
     OpenAIProviderConfig,
     ProviderConfig,
 )
+from omniadapters.structify.factory import create_adapter
+from omniadapters.structify.hooks import CompletionTrace
+from omniadapters.structify.models import CompletionResult
 
 __all__ = [
     "create_adapter",

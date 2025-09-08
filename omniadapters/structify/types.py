@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from google.genai.types import GenerateContentResponse
     from openai.types.chat import ChatCompletion
 
-    from omniadapters.structify.models import BaseProviderConfig, CompletionClientParams
+    from omniadapters.core.models import BaseProviderConfig, CompletionClientParams
 
 StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
 BaseProviderConfigT = TypeVar("BaseProviderConfigT", bound="BaseProviderConfig")

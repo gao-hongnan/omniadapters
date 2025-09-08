@@ -44,20 +44,19 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
+from omniadapters.core.models import (
+    AnthropicCompletionClientParams,
+    AnthropicProviderConfig,
+    GeminiCompletionClientParams,
+    GeminiProviderConfig,
+    OpenAICompletionClientParams,
+    OpenAIProviderConfig,
+)
 from omniadapters.structify import create_adapter
 from omniadapters.structify.adapters.anthropic import AnthropicAdapter
 from omniadapters.structify.adapters.gemini import GeminiAdapter
 from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import (
-    AnthropicCompletionClientParams,
-    AnthropicProviderConfig,
-    CompletionResult,
-    GeminiCompletionClientParams,
-    GeminiProviderConfig,
-    InstructorConfig,
-    OpenAICompletionClientParams,
-    OpenAIProviderConfig,
-)
+from omniadapters.structify.models import CompletionResult, InstructorConfig
 
 console = Console()
 

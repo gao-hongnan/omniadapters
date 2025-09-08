@@ -5,16 +5,13 @@ from typing import Any, Self
 
 from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic_settings.sources import (
-    PydanticBaseSettingsSource,
-    YamlConfigSettingsSource,
-)
+from pydantic_settings.sources import PydanticBaseSettingsSource, YamlConfigSettingsSource
 
-from omniadapters.structify.models import (
+from omniadapters.core.models import (
     CompletionClientParams,
-    InstructorConfig,
     ProviderConfig,
 )
+from omniadapters.structify.models import InstructorConfig
 
 
 class BaseSettingsWithYaml(BaseSettings):

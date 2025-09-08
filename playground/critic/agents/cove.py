@@ -6,11 +6,7 @@ from typing import Any
 from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, Field, computed_field
 
-from omniadapters.structify import create_adapter
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import (
+from omniadapters.core.models import (
     AnthropicCompletionClientParams,
     AnthropicProviderConfig,
     GeminiCompletionClientParams,
@@ -18,6 +14,10 @@ from omniadapters.structify.models import (
     OpenAICompletionClientParams,
     OpenAIProviderConfig,
 )
+from omniadapters.structify import create_adapter
+from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+from omniadapters.structify.adapters.gemini import GeminiAdapter
+from omniadapters.structify.adapters.openai import OpenAIAdapter
 
 from ..config.settings import (
     CoVeVerifierConfig,

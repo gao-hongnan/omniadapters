@@ -5,18 +5,18 @@ import pytest
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import (
+from omniadapters.core.models import (
     AnthropicCompletionClientParams,
     AnthropicProviderConfig,
     GeminiCompletionClientParams,
     GeminiProviderConfig,
-    InstructorConfig,
     OpenAICompletionClientParams,
     OpenAIProviderConfig,
 )
+from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+from omniadapters.structify.adapters.gemini import GeminiAdapter
+from omniadapters.structify.adapters.openai import OpenAIAdapter
+from omniadapters.structify.models import InstructorConfig
 
 
 class TestSettings(BaseSettings):

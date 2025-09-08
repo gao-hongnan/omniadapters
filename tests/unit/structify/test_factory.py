@@ -258,7 +258,7 @@ class TestAdapterRegistry:
 @pytest.mark.unit
 class TestFactoryErrorHandling:
     def test_factory_all_providers_have_cases(self) -> None:
-        from omniadapters.structify.enums import Provider
+        from omniadapters.core.enums import Provider
 
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 

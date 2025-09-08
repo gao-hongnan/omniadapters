@@ -6,7 +6,7 @@ import instructor
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from omniadapters.structify.enums import Capability, Provider
+from omniadapters.core.enums import Capability, Provider
 from omniadapters.structify.hooks import CompletionTrace
 from omniadapters.structify.models import (
     Allowable,

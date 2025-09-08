@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 from pydantic import BaseModel
 
-from omniadapters.structify.enums import Capability, Provider
+from omniadapters.core.enums import Capability, Provider
 from omniadapters.structify.types import (
     BaseProviderConfigT,
     ClientResponseT,

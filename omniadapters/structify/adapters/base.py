@@ -7,16 +7,10 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Generic, Literal, overload
 from instructor import AsyncInstructor
 from openai.types.chat import ChatCompletionMessageParam
 
+from omniadapters.core.protocols import AsyncCloseable, AsyncContextManager
 from omniadapters.structify.hooks import ahook_instructor
 from omniadapters.structify.models import CompletionResult
-from omniadapters.structify.types import (
-    AsyncCloseable,
-    AsyncContextManager,
-    BaseProviderConfigT,
-    ClientResponseT,
-    ClientT,
-    StructuredResponseT,
-)
+from omniadapters.structify.types import BaseProviderConfigT, ClientResponseT, ClientT, StructuredResponseT
 
 if TYPE_CHECKING:
     from omniadapters.core.models import CompletionClientParams

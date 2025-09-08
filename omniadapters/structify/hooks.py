@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-from omniadapters.structify.types import ClientResponseT, MessageParam
+from omniadapters.core.types import ClientResponseT, MessageParam
 
 
 class HookHandler(Protocol):
@@ -156,7 +156,7 @@ async def ahook_instructor(
 
 
 # NOTE: Import response types for model rebuild - these are needed at runtime when CompletionTrace.model_rebuild() is called!
-from anthropic.types import Message as AnthropicResponse  # noqa: E402, F401 # type: ignore
+from anthropic.types import Message  # noqa: E402, F401 # type: ignore
 from google.genai.types import GenerateContentResponse  # noqa: E402, F401 # type: ignore
 from openai.types.chat import ChatCompletion  # noqa: E402, F401 # type: ignore
 

@@ -8,9 +8,9 @@ from instructor import AsyncInstructor
 from openai.types.chat import ChatCompletionMessageParam
 
 from omniadapters.core.protocols import AsyncCloseable, AsyncContextManager
+from omniadapters.core.types import ClientResponseT, ClientT, ProviderConfigT, StructuredResponseT
 from omniadapters.structify.hooks import ahook_instructor
 from omniadapters.structify.models import CompletionResult
-from omniadapters.structify.types import BaseProviderConfigT, ClientResponseT, ClientT, StructuredResponseT
 
 if TYPE_CHECKING:
     from omniadapters.core.models import CompletionClientParams
@@ -18,11 +18,11 @@ if TYPE_CHECKING:
     from omniadapters.structify.models import CompletionResult, InstructorConfig
 
 
-class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ClientResponseT]):
+class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientResponseT]):
     def __init__(
         self,
         *,
-        provider_config: BaseProviderConfigT,
+        provider_config: ProviderConfigT,
         completion_params: CompletionClientParams,
         instructor_config: InstructorConfig,
     ) -> None:

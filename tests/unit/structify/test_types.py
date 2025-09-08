@@ -4,11 +4,13 @@ import pytest
 from pydantic import BaseModel
 
 from omniadapters.core.enums import Capability, Provider
-from omniadapters.structify.types import (
-    BaseProviderConfigT,
+from omniadapters.core.types import (
     ClientResponseT,
     ClientT,
     StructuredResponseT,
+)
+from omniadapters.core.types import (
+    ProviderConfigT as BaseProviderConfigT,
 )
 
 
@@ -143,7 +145,7 @@ class TestTypeVars:
         assert StructuredResponseT.__name__ == "StructuredResponseT"
 
     def test_base_provider_config_t(self) -> None:
-        assert BaseProviderConfigT.__name__ == "BaseProviderConfigT"
+        assert BaseProviderConfigT.__name__ == "ProviderConfigT"
 
     def test_client_t(self) -> None:
         assert ClientT.__name__ == "ClientT"
@@ -169,26 +171,23 @@ class TestTypeVars:
 @pytest.mark.unit
 class TestTypeDefinitions:
     def test_type_checking_imports(self) -> None:
-        from omniadapters.structify import types
+        from typing import TYPE_CHECKING
 
-        assert hasattr(types, "TYPE_CHECKING")
-        assert types.TYPE_CHECKING is False
+        assert TYPE_CHECKING is False
 
     def test_response_type_constraints(self) -> None:
         assert hasattr(ClientResponseT, "__name__")
         assert ClientResponseT.__name__ == "ClientResponseT"
 
     def test_forward_references(self) -> None:
-        from omniadapters.structify.types import BaseProviderConfigT
-
         assert isinstance(BaseProviderConfigT, type(StructuredResponseT))
 
     def test_module_level_exports(self) -> None:
-        from omniadapters.structify import types
+        from omniadapters.core import types
 
         expected_type_exports = [
             "StructuredResponseT",
-            "BaseProviderConfigT",
+            "ProviderConfigT",
             "ClientT",
             "ClientResponseT",
             "CompletionClientParamsT",

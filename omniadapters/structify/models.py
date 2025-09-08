@@ -8,8 +8,8 @@ import instructor
 from pydantic import BaseModel, ConfigDict
 
 from omniadapters.core.models import Allowable
+from omniadapters.core.types import ClientResponseT, StructuredResponseT
 from omniadapters.structify.hooks import CompletionTrace
-from omniadapters.structify.types import ClientResponseT, StructuredResponseT
 
 
 class InstructorConfig(Allowable):

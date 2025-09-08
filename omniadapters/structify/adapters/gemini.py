@@ -8,9 +8,9 @@ from google.genai.types import GenerateContentConfig, GenerateContentResponse
 from openai.types.chat import ChatCompletionMessageParam
 
 from omniadapters.core.models import GeminiProviderConfig
+from omniadapters.core.types import StructuredResponseT
 from omniadapters.structify.adapters.base import BaseAdapter
 from omniadapters.structify.hooks import CompletionTrace, ahook_instructor
-from omniadapters.structify.types import StructuredResponseT
 
 if TYPE_CHECKING:
     from omniadapters.structify.models import CompletionResult

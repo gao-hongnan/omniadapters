@@ -101,5 +101,5 @@ def create_adapter(
                 completion_params=completion_params,
                 instructor_config=instructor_config,
             )
-        case _:  # pyright: ignore[reportUnnecessaryComparison]
+        case _:
             assert_never(provider_config)

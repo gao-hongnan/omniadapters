@@ -18,7 +18,6 @@ class AzureOpenAIAdapter(
         AsyncIterator[ChatCompletionChunk],
     ]
 ):
-
     def _create_client(self) -> AsyncAzureOpenAI:
         config_dict = self.provider_config.model_dump()
         return AsyncAzureOpenAI(**config_dict)
@@ -39,7 +38,7 @@ class AzureOpenAIAdapter(
             messages=openai_messages,
             **kwargs,
         )
-        return response
+        return cast(ChatCompletion, response)
 
     async def _agenerate_stream(
         self,

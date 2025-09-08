@@ -13,6 +13,7 @@ from omniadapters.core.types import MessageParam
 if TYPE_CHECKING:
     from omniadapters.core.models import CompletionClientParams
 
+
 class GeminiAdapter(
     BaseAdapter[
         GeminiProviderConfig,
@@ -21,7 +22,6 @@ class GeminiAdapter(
         AsyncIterator[GenerateContentResponse],
     ]
 ):
-
     def __init__(
         self,
         *,

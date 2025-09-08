@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator, cast
 
 from anthropic import AsyncAnthropic
 from anthropic.types import Message, MessageStreamEvent
@@ -13,6 +13,7 @@ from omniadapters.core.types import MessageParam
 if TYPE_CHECKING:
     from omniadapters.core.models import CompletionClientParams
 
+
 class AnthropicAdapter(
     BaseAdapter[
         AnthropicProviderConfig,
@@ -21,7 +22,6 @@ class AnthropicAdapter(
         AsyncIterator[MessageStreamEvent],
     ]
 ):
-
     def __init__(
         self,
         *,
@@ -49,7 +49,7 @@ class AnthropicAdapter(
         )
 
         response = await self.client.messages.create(**formatted)
-        return response
+        return cast(Message, response)
 
     async def _agenerate_stream(
         self,

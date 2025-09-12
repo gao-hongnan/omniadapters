@@ -4,13 +4,14 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, TypeAlias, TypeVar
 
 from anthropic.types import Message, MessageStreamEvent
 from google.genai.types import GenerateContentResponse
+from instructor.multimodal import Audio, Image
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from omniadapters.core.models import BaseProviderConfig, CompletionClientParams
 
-MessageParam: TypeAlias = dict[str, Any]
+MessageParam: TypeAlias = dict[str, str | dict[str, Any] | Image | Audio | list[str | dict[str, Any] | Image | Audio]]
 ClientT = TypeVar("ClientT")
 ClientResponseT = TypeVar("ClientResponseT", bound=ChatCompletion | Message | GenerateContentResponse)
 ProviderConfigT = TypeVar("ProviderConfigT", bound="BaseProviderConfig")

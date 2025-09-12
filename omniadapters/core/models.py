@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Generic, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from omniadapters.core.enums import Capability, Provider
+from omniadapters.core.types import ClientResponseT, StreamChunkType
 
 
 class Allowable(BaseModel):
@@ -79,3 +80,31 @@ CompletionClientParams = Annotated[
     | AzureOpenAICompletionClientParams,
     Field(discriminator="provider"),
 ]
+
+
+class CompletionUsage(BaseModel):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+
+class CompletionResponse(BaseModel, Generic[ClientResponseT]):
+    content: str
+    model: str
+    usage: CompletionUsage | None = None
+    raw_response: ClientResponseT = Field(exclude=True)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class StreamChunk(BaseModel):
+    content: str
+    model: str | None = None
+    finish_reason: str | None = None
+    raw_chunk: StreamChunkType = Field(exclude=True)
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+# Rebuild model to resolve forward references
+StreamChunk.model_rebuild()

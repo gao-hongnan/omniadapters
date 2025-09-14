@@ -55,23 +55,13 @@ class OpenAIAdapter(
     ) -> ChatCompletion | AsyncIterator[ChatCompletionChunk]:
         formatted_messages = self._format_messages(messages, **kwargs)
 
-        if stream:
-            # NOTE: stream_response is `AsyncStream[ChatCompletionChunk]` but is a subclass of `AsyncIterator[ChatCompletionChunk]`
-            stream_response = await self.client.chat.completions.create(
-                messages=formatted_messages,
-                model=self.completion_params.model,
-                stream=True,
-                extra_body=kwargs,
-            )
-            return stream_response
-        else:
-            response = await self.client.chat.completions.create(
-                messages=formatted_messages,
-                model=self.completion_params.model,
-                stream=False,
-                extra_body=kwargs,
-            )
-            return response
+        response = await self.client.chat.completions.create(
+            messages=formatted_messages,
+            model=self.completion_params.model,
+            stream=stream,
+            extra_body=kwargs,
+        )
+        return response
 
     def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
         choice = response.choices[0] if response.choices else None

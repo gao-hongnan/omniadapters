@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Literal, cast, overload
+from typing import Any, AsyncIterator, Literal, overload
 
 from anthropic import AsyncAnthropic
 from anthropic.types import Message, RawMessageStreamEvent
@@ -56,27 +56,16 @@ class AnthropicAdapter(
     ) -> Message | AsyncIterator[RawMessageStreamEvent]:
         formatted_messages = self._format_messages(messages, **kwargs)
 
-        if stream:
-            raw_stream = await self.client.messages.create(
-                messages=formatted_messages,
-                model=self.completion_params.model,
-                max_tokens=kwargs.pop("max_tokens", 1024),
-                stream=True,
-                extra_body=kwargs,
-            )
-            stream_iter = cast(AsyncIterator[RawMessageStreamEvent], raw_stream)
-            return stream_iter
-        else:
-            # NOTE: least overload needed requires model and max_tokens!
-            response = await self.client.messages.create(
-                messages=formatted_messages,
-                model=self.completion_params.model,
-                max_tokens=kwargs.pop("max_tokens", 1024),
-                stream=False,
-                extra_body=kwargs,
-            )
+        # NOTE: least overload needed requires model and max_tokens!
+        response = await self.client.messages.create(
+            messages=formatted_messages,
+            model=self.completion_params.model,
+            max_tokens=kwargs.pop("max_tokens", 1024),
+            stream=stream,
+            extra_body=kwargs,
+        )
 
-            return response
+        return response
 
     def _to_unified_response(self, response: Message) -> CompletionResponse[Message]:
         content = ""

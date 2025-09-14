@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, cast
+from typing import Any, AsyncIterator, Literal, overload
 
 from instructor import Mode
 from openai import AsyncOpenAI
@@ -15,8 +15,9 @@ class OpenAIAdapter(
     BaseAdapter[
         OpenAIProviderConfig,
         AsyncOpenAI,
+        ChatCompletionMessageParam,
         ChatCompletion,
-        AsyncIterator[ChatCompletionChunk],
+        ChatCompletionChunk,
     ]
 ):
     @property
@@ -27,44 +28,49 @@ class OpenAIAdapter(
         config_dict = self.provider_config.model_dump()
         return AsyncOpenAI(**config_dict)
 
+    @overload
     async def _agenerate(
         self,
         messages: list[MessageParam],
+        *,
+        stream: Literal[False] = False,
         **kwargs: Any,
-    ) -> ChatCompletion:
-        kwargs.pop("stream", None)
+    ) -> ChatCompletion: ...
 
-        params = self._prepare_request(messages, **kwargs)
-
-        coerced_messages = cast(list[ChatCompletionMessageParam], params.pop("messages"))
-
-        response = await self.client.chat.completions.create(
-            messages=coerced_messages,
-            model=self.completion_params.model,
-            extra_body=params,
-        )
-        return response
-
-    async def _agenerate_stream(
+    @overload
+    async def _agenerate(
         self,
         messages: list[MessageParam],
+        *,
+        stream: Literal[True],
         **kwargs: Any,
-    ) -> AsyncIterator[ChatCompletionChunk]:
-        kwargs["stream"] = True
+    ) -> AsyncIterator[ChatCompletionChunk]: ...
 
-        params = self._prepare_request(messages, **kwargs)
+    async def _agenerate(
+        self,
+        messages: list[MessageParam],
+        *,
+        stream: bool = False,
+        **kwargs: Any,
+    ) -> ChatCompletion | AsyncIterator[ChatCompletionChunk]:
+        formatted_messages = self._format_messages(messages, **kwargs)
 
-        coerced_messages = cast(list[ChatCompletionMessageParam], params.pop("messages"))
-
-        stream = await self.client.chat.completions.create(
-            messages=coerced_messages,
-            model=self.completion_params.model,
-            stream=True,
-            extra_body=params,
-        )
-
-        async for chunk in stream:
-            yield chunk
+        if stream:
+            stream_response = await self.client.chat.completions.create(
+                messages=formatted_messages,
+                model=self.completion_params.model,
+                stream=True,
+                extra_body=kwargs,
+            )
+            return stream_response
+        else:
+            response = await self.client.chat.completions.create(
+                messages=formatted_messages,
+                model=self.completion_params.model,
+                stream=False,
+                extra_body=kwargs,
+            )
+            return response
 
     def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
         choice = response.choices[0] if response.choices else None

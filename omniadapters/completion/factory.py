@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, assert_never, overload
+from typing import assert_never, overload
 
 from omniadapters.completion.adapters.anthropic import AnthropicAdapter
 from omniadapters.completion.adapters.azure_openai import AzureOpenAIAdapter
-from omniadapters.completion.adapters.base import BaseAdapter
 from omniadapters.completion.adapters.gemini import GeminiAdapter
 from omniadapters.completion.adapters.openai import OpenAIAdapter
 from omniadapters.core.models import (
@@ -23,36 +22,49 @@ from omniadapters.core.models import (
 
 @overload
 def create_adapter(
+    *,
     provider_config: OpenAIProviderConfig,
-    completion_params: OpenAICompletionClientParams | None = None,
+    completion_params: OpenAICompletionClientParams,
 ) -> OpenAIAdapter: ...
 
 
 @overload
 def create_adapter(
+    *,
     provider_config: AnthropicProviderConfig,
-    completion_params: AnthropicCompletionClientParams | None = None,
+    completion_params: AnthropicCompletionClientParams,
 ) -> AnthropicAdapter: ...
 
 
 @overload
 def create_adapter(
+    *,
     provider_config: GeminiProviderConfig,
-    completion_params: GeminiCompletionClientParams | None = None,
+    completion_params: GeminiCompletionClientParams,
 ) -> GeminiAdapter: ...
 
 
 @overload
 def create_adapter(
+    *,
     provider_config: AzureOpenAIProviderConfig,
-    completion_params: AzureOpenAICompletionClientParams | None = None,
+    completion_params: AzureOpenAICompletionClientParams,
 ) -> AzureOpenAIAdapter: ...
 
 
+@overload
 def create_adapter(
+    *,
     provider_config: ProviderConfig,
-    completion_params: CompletionClientParams | None = None,
-) -> BaseAdapter[Any, Any, Any, Any]:
+    completion_params: CompletionClientParams,
+) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter | AzureOpenAIAdapter: ...
+
+
+def create_adapter(
+    *,
+    provider_config: ProviderConfig,
+    completion_params: CompletionClientParams,
+) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter | AzureOpenAIAdapter:
     match provider_config:
         case OpenAIProviderConfig():
             return OpenAIAdapter(

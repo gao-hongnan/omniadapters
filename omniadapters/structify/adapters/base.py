@@ -83,6 +83,8 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientResponseT]):
         with_hooks: bool = False,
         **kwargs: Any,
     ) -> StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]:
+        """Worth noting we follow instructor's pattern whereby all messages are a list of OpenAI's ChatCompletionMessageParam,
+        in which they will convert and unify to the provider's client message type."""
         captured: CompletionTrace[ClientResponseT]
         # NOTE: Merge completion params with kwargs, letting kwargs override
         completion_kwargs = {**self.completion_params.model_dump(), **kwargs}

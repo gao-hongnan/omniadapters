@@ -56,6 +56,7 @@ class OpenAIAdapter(
         formatted_messages = self._format_messages(messages, **kwargs)
 
         if stream:
+            # NOTE: stream_response is `AsyncStream[ChatCompletionChunk]` but is a subclass of `AsyncIterator[ChatCompletionChunk]`
             stream_response = await self.client.chat.completions.create(
                 messages=formatted_messages,
                 model=self.completion_params.model,

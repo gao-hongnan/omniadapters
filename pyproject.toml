@@ -48,9 +48,7 @@ dependencies = [
 
 [project.optional-dependencies]
 playground = [
-    "rich>=13.12.0",
-    "typer>=0.15.1",
-    "python-dotenv>=1.0.1",
+    "pydanticonf>=1.0.0",
 ]
 
 [dependency-groups]

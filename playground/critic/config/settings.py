@@ -4,50 +4,11 @@ from functools import lru_cache
 from typing import Any, Self
 
 from pydantic import BaseModel, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic_settings.sources import PydanticBaseSettingsSource, YamlConfigSettingsSource
+from pydantic_settings import SettingsConfigDict
+from pydanticonf.settings import BaseSettingsWithYaml
 
-from omniadapters.core.models import (
-    CompletionClientParams,
-    ProviderConfig,
-)
+from omniadapters.core.models import CompletionClientParams, ProviderConfig
 from omniadapters.structify.models import InstructorConfig
-
-
-class BaseSettingsWithYaml(BaseSettings):
-    @classmethod
-    def settings_customise_sources(
-        cls: type[BaseSettingsWithYaml],
-        settings_cls: type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource, ...]:
-        config: SettingsConfigDict = cls.model_config
-
-        if not (yaml_file := config.get("yaml_file")):
-            return super().settings_customise_sources(
-                settings_cls=settings_cls,
-                init_settings=init_settings,
-                env_settings=env_settings,
-                dotenv_settings=dotenv_settings,
-                file_secret_settings=file_secret_settings,
-            )
-
-        yaml_settings = YamlConfigSettingsSource(
-            settings_cls,
-            yaml_file=yaml_file,
-            yaml_file_encoding=config.get("yaml_file_encoding", "utf-8"),
-        )
-
-        return (
-            init_settings,
-            env_settings,
-            dotenv_settings,
-            file_secret_settings,
-            yaml_settings,
-        )
 
 
 class PromptsConfig(BaseModel):
@@ -92,18 +53,11 @@ class CoVeVerifierConfig(BaseModel):
 class Settings(BaseSettingsWithYaml):  # NOTE: if you do not subclass this, you will face error.
     cove: CoVeVerifierConfig
 
-    model_config = SettingsConfigDict(
-        env_nested_delimiter="__",
-        extra="allow",
-    )
+    model_config = SettingsConfigDict(env_nested_delimiter="__", extra="allow")
 
 
-@lru_cache(maxsize=1)
-def get_settings(
-    env_file: str | None = None,
-    yaml_file: str | None = None,
-    **kwargs: Any,
-) -> Settings:
+@lru_cache(maxsize=128)
+def get_settings(env_file: str | None = None, yaml_file: str | None = None, **kwargs: Any) -> Settings:
     config_dict = Settings.model_config.copy()
 
     if env_file:
@@ -111,9 +65,9 @@ def get_settings(
     if yaml_file:
         config_dict["yaml_file"] = yaml_file
 
-    config_dict.update(kwargs)  # type: ignore[reportCallIssue]
+    config_dict.update(kwargs)  # type: ignore[typeddict-item]
 
     class RuntimeSettings(Settings):
         model_config = SettingsConfigDict(**config_dict)
 
-    return RuntimeSettings()  # type: ignore[reportCallIssue]
+    return RuntimeSettings(**kwargs)

@@ -1331,9 +1331,7 @@ dependencies = [
 
 [package.optional-dependencies]
 playground = [
-    { name = "python-dotenv" },
-    { name = "rich" },
-    { name = "typer" },
+    { name = "pydanticonf" },
 ]
 
 [package.dev-dependencies]
@@ -1403,9 +1401,7 @@ requires-dist = [
     { name = "openai", specifier = ">=1.97.1" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },
-    { name = "python-dotenv", marker = "extra == 'playground'", specifier = ">=1.0.1" },
-    { name = "rich", marker = "extra == 'playground'", specifier = ">=13.12.0" },
-    { name = "typer", marker = "extra == 'playground'", specifier = ">=0.15.1" },
+    { name = "pydanticonf", marker = "extra == 'playground'", specifier = ">=1.0.0" },
 ]
 provides-extras = ["playground"]
 
@@ -1786,6 +1782,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/68/85/1ea668bbab3c50071ca613c6ab30047fb36ab0da1b92fa8f17bbc38fd36c/pydantic_settings-2.10.1.tar.gz", hash = "sha256:06f0062169818d0f5524420a360d632d5857b83cffd4d42fe29597807a1614ee", size = 172583 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/58/f0/427018098906416f580e3cf1366d3b1abfb408a0652e9f31600c24a1903c/pydantic_settings-2.10.1-py3-none-any.whl", hash = "sha256:a60952460b99cf661dc25c29c0ef171721f98bfcb52ef8d9ea4c943d7c8cc796", size = 45235 },
+]
+
+[[package]]
+name = "pydanticonf"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/65/f2/942b400f881224b5ca929d5580e1fc953fe223b052af8a161f99eb2337e4/pydanticonf-1.0.0.tar.gz", hash = "sha256:ae4bd8a76d2dd998d60a05c000a36840f5aadda6f0821fb0d6cffecd3b0b391a", size = 76305 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9b/01/75752fa01b317cce29bccc50a598c20d059e167286ad3ab7db8e8c1f9b60/pydanticonf-1.0.0-py3-none-any.whl", hash = "sha256:948a80926763eff157fae2a4cf9163778ea5b4bca69c4e4f46d8899ba42682d1", size = 2724 },
 ]
 
 [[package]]

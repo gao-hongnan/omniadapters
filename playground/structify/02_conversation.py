@@ -8,9 +8,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from typing import Literal
+from typing import Literal, cast
 
-import instructor
 from instructor.dsl.partial import PartialLiteralMixin
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
@@ -19,43 +18,18 @@ from openai.types.chat import (
     ChatCompletionUserMessageParam,
 )
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from omniadapters.core.models import (
-    AnthropicCompletionClientParams,
-    AnthropicProviderConfig,
-    GeminiCompletionClientParams,
-    GeminiProviderConfig,
-    OpenAICompletionClientParams,
-    OpenAIProviderConfig,
-)
-from omniadapters.structify import create_adapter
 from omniadapters.structify.adapters.anthropic import AnthropicAdapter
 from omniadapters.structify.adapters.gemini import GeminiAdapter
 from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import InstructorConfig
+from playground.structify.config import create_demo_adapter
 
 console = Console()
-
-
-class Settings(BaseSettings):
-    openai_api_key: str = Field(default="", alias="OPENAI__API_KEY")
-    anthropic_api_key: str = Field(default="", alias="ANTHROPIC__API_KEY")
-    gemini_api_key: str = Field(default="", alias="GEMINI__API_KEY")
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-
-settings = Settings()
 
 
 class IssueAnalysis(BaseModel, PartialLiteralMixin):
@@ -78,43 +52,6 @@ class ConversationResponse(BaseModel):
     message: str = Field(description="Response to the user")
     needs_more_info: bool = Field(default=False, description="Whether more information is needed")
     follow_up_questions: list[str] = Field(default_factory=list, description="Questions to ask if needed")
-
-
-def create_provider_adapter(
-    provider: str,
-) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
-    if provider == "openai":
-        if not settings.openai_api_key:
-            raise ValueError("OpenAI API key not set")
-        return create_adapter(
-            provider_config=OpenAIProviderConfig(api_key=settings.openai_api_key),
-            completion_params=OpenAICompletionClientParams(
-                model="gpt-4o-mini",
-            ),
-            instructor_config=InstructorConfig(mode=instructor.Mode.TOOLS_STRICT),
-        )
-    elif provider == "anthropic":
-        if not settings.anthropic_api_key:
-            raise ValueError("Anthropic API key not set")
-        return create_adapter(
-            provider_config=AnthropicProviderConfig(api_key=settings.anthropic_api_key),
-            completion_params=AnthropicCompletionClientParams(
-                model="claude-3-5-haiku-20241022",
-            ),
-            instructor_config=InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS),
-        )
-    elif provider == "gemini":
-        if not settings.gemini_api_key:
-            raise ValueError("Gemini API key not set")
-        return create_adapter(
-            provider_config=GeminiProviderConfig(api_key=settings.gemini_api_key),
-            completion_params=GeminiCompletionClientParams(
-                model="gemini-2.5-flash",
-            ),
-            instructor_config=InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS),
-        )
-    else:
-        raise ValueError(f"Unknown provider: {provider}")
 
 
 def format_streaming_response(partial: ConversationResponse) -> Text:
@@ -292,7 +229,8 @@ async def tech_support_conversation(provider: str, stream_mode: bool = False) ->
         )
     )
 
-    adapter = create_provider_adapter(provider)
+    provider_literal = cast(Literal["openai", "anthropic", "gemini"], provider)
+    adapter = create_demo_adapter(provider_literal)
     try:
         conversation_history: list[ChatCompletionMessageParam] = [
             ChatCompletionSystemMessageParam(

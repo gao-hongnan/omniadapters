@@ -26,16 +26,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 from pprint import pprint
-from typing import Any
+from typing import Any, Literal
 
-import instructor
 from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
 )
 from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
@@ -44,66 +42,13 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from omniadapters.core.models import (
-    AnthropicCompletionClientParams,
-    AnthropicProviderConfig,
-    GeminiCompletionClientParams,
-    GeminiProviderConfig,
-    OpenAICompletionClientParams,
-    OpenAIProviderConfig,
-)
-from omniadapters.structify import create_adapter
 from omniadapters.structify.adapters.anthropic import AnthropicAdapter
 from omniadapters.structify.adapters.gemini import GeminiAdapter
 from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import CompletionResult, InstructorConfig
+from omniadapters.structify.models import CompletionResult
+from playground.structify.config import create_demo_adapter
 
 console = Console()
-
-
-class Settings(BaseSettings):
-    openai_api_key: str = Field(default="", alias="OPENAI__API_KEY")
-    anthropic_api_key: str = Field(default="", alias="ANTHROPIC__API_KEY")
-    gemini_api_key: str = Field(default="", alias="GEMINI__API_KEY")
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-
-settings = Settings()
-
-
-class OpenAIProvider(OpenAIProviderConfig):
-    api_key: str
-
-
-class OpenAICompletion(OpenAICompletionClientParams):
-    model: str = Field(default="gpt-4o-mini")
-    temperature: float = Field(default=0.7)
-    max_completion_tokens: int = Field(default=1000)
-
-
-class AnthropicProvider(AnthropicProviderConfig):
-    api_key: str
-
-
-class AnthropicCompletion(AnthropicCompletionClientParams):
-    model: str = Field(default="claude-3-5-haiku-20241022")
-    temperature: float = Field(default=0.7)
-    max_tokens: int = Field(default=1000)
-
-
-class GeminiProvider(GeminiProviderConfig):
-    api_key: str
-
-
-class GeminiCompletion(GeminiCompletionClientParams):
-    model: str = Field(default="gemini-2.5-flash", exclude=True)
-    temperature: float = Field(default=1.0)
-    max_output_tokens: int = Field(default=1000)
 
 
 class MovieReview(BaseModel):
@@ -249,31 +194,6 @@ async def review_movie_streaming(
     return final_review or MovieReview(title="Unknown", rating=0, summary="", pros=[], cons=[])
 
 
-def create_demo_adapter(
-    provider: str,
-) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
-    if provider == "openai":
-        return create_adapter(
-            provider_config=OpenAIProvider(api_key=settings.openai_api_key),
-            completion_params=OpenAICompletion(),
-            instructor_config=InstructorConfig(mode=instructor.Mode.TOOLS),
-        )
-    elif provider == "anthropic":
-        return create_adapter(
-            provider_config=AnthropicProvider(api_key=settings.anthropic_api_key),
-            completion_params=AnthropicCompletion(),
-            instructor_config=InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS),
-        )
-    elif provider == "gemini":
-        return create_adapter(
-            provider_config=GeminiProvider(api_key=settings.gemini_api_key),
-            completion_params=GeminiCompletion(),
-            instructor_config=InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS),
-        )
-    else:
-        raise ValueError(f"Unknown provider: {provider}")
-
-
 async def main() -> None:
     parser = argparse.ArgumentParser(description="Movie review with different LLM providers")
     parser.add_argument(
@@ -299,7 +219,9 @@ async def main() -> None:
         ChatCompletionUserMessageParam(role="user", content=f"Review the movie '{args.movie}' for me."),
     ]
 
-    providers = ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider]
+    providers: list[Literal["openai", "anthropic", "gemini"]] = (
+        ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider]
+    )
 
     for i, provider in enumerate(providers):
         adapter = create_demo_adapter(provider)

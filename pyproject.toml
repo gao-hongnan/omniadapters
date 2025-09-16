@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omniadapters"
-version = "11.0.0"
+version = "12.0.0"
 description = "A collection of code for omniadapters - unified interfaces for LLM providers."
 authors = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
 maintainers = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
@@ -48,9 +48,7 @@ dependencies = [
 
 [project.optional-dependencies]
 playground = [
-    "rich>=13.12.0",
-    "typer>=0.15.1",
-    "python-dotenv>=1.0.1",
+    "pydanticonf>=1.0.0",
 ]
 
 [dependency-groups]

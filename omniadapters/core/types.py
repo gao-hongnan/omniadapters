@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from anthropic.types import Message, MessageStreamEvent
 from anthropic.types import MessageParam as AnthropicMessageParam
@@ -12,7 +12,7 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from omniadapters.core.models import BaseProviderConfig, CompletionClientParams
 
-MessageParam: TypeAlias = dict[str, str | dict[str, Any] | Image | Audio | list[str | dict[str, Any] | Image | Audio]]
+type MessageParam = dict[str, str | dict[str, Any] | Image | Audio | list[str | dict[str, Any] | Image | Audio]]
 ClientT = TypeVar("ClientT")
 ClientMessageT = TypeVar(
     "ClientMessageT",
@@ -23,5 +23,5 @@ ClientResponseT = TypeVar("ClientResponseT", bound=ChatCompletion | Message | Ge
 ProviderConfigT = TypeVar("ProviderConfigT", bound="BaseProviderConfig")
 CompletionClientParamsT = TypeVar("CompletionClientParamsT", bound="CompletionClientParams")
 StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
-StreamChunkType: TypeAlias = ChatCompletionChunk | MessageStreamEvent | GenerateContentResponse
+type StreamChunkType = ChatCompletionChunk | MessageStreamEvent | GenerateContentResponse
 StreamChunkT = TypeVar("StreamChunkT", bound=ChatCompletionChunk | MessageStreamEvent | GenerateContentResponse)

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, Protocol, TypeAlias
+from typing import Any, Protocol
 
 from jinja2 import Environment, FileSystemLoader
 from jinja2.exceptions import TemplateNotFound, UndefinedError
 
-PromptVariables: TypeAlias = dict[str, Any]
+type PromptVariables = dict[str, Any]
 
 
 class PromptRenderer(Protocol):

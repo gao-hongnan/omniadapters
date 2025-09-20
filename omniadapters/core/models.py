@@ -106,5 +106,4 @@ class StreamChunk(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-# Rebuild model to resolve forward references
 StreamChunk.model_rebuild()

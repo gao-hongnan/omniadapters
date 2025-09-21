@@ -1,7 +1,3 @@
-"""
-Shared configuration for structify demos
-"""
-
 from __future__ import annotations
 
 from functools import lru_cache
@@ -98,7 +94,7 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Get the singleton settings instance"""
-    return Settings(_env_file="playground/structify/.env")  # pyright: ignore[reportCallIssue]
+    return Settings(_env_file="playground/structify/text/.env")  # pyright: ignore[reportCallIssue]
 
 
 def create_demo_adapter(

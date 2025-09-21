@@ -2,22 +2,22 @@
 Structify Adapter Pattern Demo - Movie Review CLI
 
 ```bash
-uv run playground/structify/01_demo.py --provider all
+uv run playground/structify/text/01_demo.py --provider all
 
-uv run playground/structify/01_demo.py --provider openai
-uv run playground/structify/01_demo.py --provider anthropic
-uv run playground/structify/01_demo.py --provider gemini
+uv run playground/structify/text/01_demo.py --provider openai
+uv run playground/structify/text/01_demo.py --provider anthropic
+uv run playground/structify/text/01_demo.py --provider gemini
 
-uv run playground/structify/01_demo.py --movie "The Matrix"
-uv run playground/structify/01_demo.py --provider anthropic --movie "Blade Runner"
+uv run playground/structify/text/01_demo.py --movie "The Matrix"
+uv run playground/structify/text/01_demo.py --provider anthropic --movie "Blade Runner"
 
-uv run playground/structify/01_demo.py --stream
-uv run playground/structify/01_demo.py --provider openai --stream
-uv run playground/structify/01_demo.py --provider gemini --movie "Dune" --stream
+uv run playground/structify/text/01_demo.py --stream
+uv run playground/structify/text/01_demo.py --provider openai --stream
+uv run playground/structify/text/01_demo.py --provider gemini --movie "Dune" --stream
 
-uv run playground/structify/01_demo.py --trace --provider all
-uv run playground/structify/01_demo.py --provider openai --trace
-uv run playground/structify/01_demo.py --provider openai --movie "Interstellar" --stream --trace
+uv run playground/structify/text/01_demo.py --trace --provider all
+uv run playground/structify/text/01_demo.py --provider openai --trace
+uv run playground/structify/text/01_demo.py --provider openai --movie "Interstellar" --stream --trace
 ```
 """
 
@@ -46,7 +46,7 @@ from omniadapters.structify.adapters.anthropic import AnthropicAdapter
 from omniadapters.structify.adapters.gemini import GeminiAdapter
 from omniadapters.structify.adapters.openai import OpenAIAdapter
 from omniadapters.structify.models import CompletionResult
-from playground.structify.config import create_demo_adapter
+from playground.structify.text.config import create_demo_adapter
 
 console = Console()
 

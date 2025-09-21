@@ -5,7 +5,7 @@ Shared configuration for structify demos
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Generic, Literal, TypeVar, assert_never
+from typing import Generic, Literal, TypeVar, cast
 
 import instructor
 from pydantic import BaseModel, Field
@@ -28,34 +28,24 @@ from omniadapters.structify.models import InstructorConfig
 
 class OpenAICompletion(OpenAICompletionClientParams):
     model: str = Field(default="gpt-4o-mini")
-    temperature: float = Field(default=0.7)
-    max_completion_tokens: int = Field(default=1000)
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+    max_completion_tokens: int = Field(default=1000, gt=0, le=100000)
 
 
 class AnthropicCompletion(AnthropicCompletionClientParams):
     model: str = Field(default="claude-3-5-haiku-20241022")
-    temperature: float = Field(default=0.7)
-    max_tokens: int = Field(default=1000)
+    temperature: float = Field(default=0.7, ge=0.0, le=1.0)
+    max_tokens: int = Field(default=1000, gt=0, le=200000)
 
 
 class GeminiCompletion(GeminiCompletionClientParams):
     model: str = Field(default="gemini-2.5-flash", exclude=True)
-    temperature: float = Field(default=1.0)
-    max_output_tokens: int = Field(default=1000)
+    temperature: float = Field(default=1.0, ge=0.0, le=2.0)
+    max_output_tokens: int = Field(default=1000, gt=0, le=8192)
 
 
 class InstructorSettings(BaseModel):
-    mode: str = Field(default="TOOLS")
-
-    def get_mode(self) -> instructor.Mode:
-        """Convert string mode to instructor.Mode enum"""
-        mode_map = {
-            "TOOLS": instructor.Mode.TOOLS,
-            "TOOLS_STRICT": instructor.Mode.TOOLS_STRICT,
-            "ANTHROPIC_TOOLS": instructor.Mode.ANTHROPIC_TOOLS,
-            "GENAI_STRUCTURED_OUTPUTS": instructor.Mode.GENAI_STRUCTURED_OUTPUTS,
-        }
-        return mode_map.get(self.mode, instructor.Mode.TOOLS)
+    mode: instructor.Mode = Field(default=instructor.Mode.TOOLS)
 
 
 P = TypeVar("P", OpenAIProviderConfig, AnthropicProviderConfig, GeminiProviderConfig)
@@ -79,27 +69,19 @@ class ModelFamily(BaseModel):
         self, provider: Literal["openai", "anthropic", "gemini"]
     ) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
         """Create adapter for specified provider"""
-        match provider:
-            case "openai":
-                return create_adapter(
-                    provider_config=self.openai.provider,
-                    completion_params=self.openai.completion,
-                    instructor_config=InstructorConfig(mode=self.openai.instructor.get_mode()),
-                )
-            case "anthropic":
-                return create_adapter(
-                    provider_config=self.anthropic.provider,
-                    completion_params=self.anthropic.completion,
-                    instructor_config=InstructorConfig(mode=self.anthropic.instructor.get_mode()),
-                )
-            case "gemini":
-                return create_adapter(
-                    provider_config=self.gemini.provider,
-                    completion_params=self.gemini.completion,
-                    instructor_config=InstructorConfig(mode=self.gemini.instructor.get_mode()),
-                )
-            case _:
-                assert_never(provider)
+        family: (
+            ProviderFamily[OpenAIProviderConfig, OpenAICompletion]
+            | ProviderFamily[AnthropicProviderConfig, AnthropicCompletion]
+            | ProviderFamily[GeminiProviderConfig, GeminiCompletion]
+        ) = getattr(self, provider)
+        return cast(
+            OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
+            create_adapter(
+                provider_config=family.provider,
+                completion_params=family.completion,
+                instructor_config=InstructorConfig(mode=family.instructor.mode),
+            ),
+        )
 
 
 class Settings(BaseSettings):
@@ -113,7 +95,7 @@ class Settings(BaseSettings):
     )
 
 
-@lru_cache(maxsize=128)
+@lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Get the singleton settings instance"""
     return Settings(_env_file="playground/structify/.env")  # pyright: ignore[reportCallIssue]

@@ -14,3 +14,4 @@ class Capability(StrEnum):
     COMPLETION = "completion"
     EMBEDDING = "embedding"
     VISION = "vision"
+    AUDIO = "audio"

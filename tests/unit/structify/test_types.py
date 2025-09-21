@@ -86,11 +86,13 @@ class TestCapabilityEnum:
         assert str(Capability.COMPLETION) == "completion"
         assert str(Capability.EMBEDDING) == "embedding"
         assert str(Capability.VISION) == "vision"
+        assert str(Capability.AUDIO) == "audio"
 
     def test_capability_enum_membership(self) -> None:
         assert "completion" in Capability
         assert "embedding" in Capability
         assert "vision" in Capability
+        assert "audio" in Capability
 
         assert "invalid_capability" not in Capability
         assert "chat" not in Capability
@@ -98,10 +100,11 @@ class TestCapabilityEnum:
 
     def test_capability_enum_iteration(self) -> None:
         capabilities = list(Capability)
-        assert len(capabilities) == 3
+        assert len(capabilities) == 4
         assert Capability.COMPLETION in capabilities
         assert Capability.EMBEDDING in capabilities
         assert Capability.VISION in capabilities
+        assert Capability.AUDIO in capabilities
 
     def test_capability_enum_string_operations(self) -> None:
         capability = Capability.COMPLETION
@@ -124,6 +127,7 @@ class TestCapabilityEnum:
         assert Capability.COMPLETION.value == "completion"
         assert Capability.EMBEDDING.value == "embedding"
         assert Capability.VISION.value == "vision"
+        assert Capability.AUDIO.value == "audio"
 
         for capability in Capability:
             assert capability.value.islower()
@@ -133,6 +137,7 @@ class TestCapabilityEnum:
         assert Capability("completion") == Capability.COMPLETION
         assert Capability("embedding") == Capability.EMBEDDING
         assert Capability("vision") == Capability.VISION
+        assert Capability("audio") == Capability.AUDIO
 
         with pytest.raises(ValueError):
             Capability("invalid_capability")
@@ -246,7 +251,7 @@ class TestEnumExtensibility:
             assert provider.islower()
 
     def test_capability_extensibility(self) -> None:
-        current_capabilities = {Capability.COMPLETION, Capability.EMBEDDING, Capability.VISION}
+        current_capabilities = {Capability.COMPLETION, Capability.EMBEDDING, Capability.VISION, Capability.AUDIO}
         assert len(current_capabilities) == 3
 
         for capability in current_capabilities:
@@ -258,10 +263,12 @@ class TestEnumExtensibility:
         assert str(Provider.OPENAI) == "openai"
         assert str(Provider.ANTHROPIC) == "anthropic"
         assert str(Provider.GEMINI) == "gemini"
+        assert str(Provider.AZURE_OPENAI) == "azure-openai"
 
         assert str(Capability.COMPLETION) == "completion"
         assert str(Capability.EMBEDDING) == "embedding"
         assert str(Capability.VISION) == "vision"
+        assert str(Capability.AUDIO) == "audio"
 
     def test_enum_serialization(self) -> None:
         import json

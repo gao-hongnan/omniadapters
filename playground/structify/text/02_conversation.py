@@ -40,7 +40,7 @@ from rich.text import Text
 from omniadapters.structify.adapters.anthropic import AnthropicAdapter
 from omniadapters.structify.adapters.gemini import GeminiAdapter
 from omniadapters.structify.adapters.openai import OpenAIAdapter
-from playground.structify.text.config import create_demo_adapter
+from playground.structify.text.settings import create_demo_adapter
 
 console = Console()
 

@@ -38,7 +38,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from pprint import pprint
 from typing import Any, Literal
 
 from openai.types.chat import (
@@ -50,6 +49,7 @@ from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
+from rich.pretty import pprint
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.syntax import Syntax
 from rich.table import Table
@@ -59,7 +59,7 @@ from omniadapters.structify.adapters.anthropic import AnthropicAdapter
 from omniadapters.structify.adapters.gemini import GeminiAdapter
 from omniadapters.structify.adapters.openai import OpenAIAdapter
 from omniadapters.structify.models import CompletionResult
-from playground.structify.text.config import create_demo_adapter
+from playground.structify.text.settings import create_demo_adapter
 
 console = Console()
 

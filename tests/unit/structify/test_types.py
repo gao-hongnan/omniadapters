@@ -252,7 +252,7 @@ class TestEnumExtensibility:
 
     def test_capability_extensibility(self) -> None:
         current_capabilities = {Capability.COMPLETION, Capability.EMBEDDING, Capability.VISION, Capability.AUDIO}
-        assert len(current_capabilities) == 3
+        assert len(current_capabilities) == 4
 
         for capability in current_capabilities:
             assert isinstance(capability, str)

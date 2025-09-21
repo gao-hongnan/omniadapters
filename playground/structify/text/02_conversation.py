@@ -1,6 +1,19 @@
+# /// script
+# dependencies = [
+#   "openai==1.105.0",
+#   "anthropic==0.66.0",
+#   "google-genai==1.33.0",
+#   "instructor==1.10.0",
+#   "jsonref==1.1.0",
+#   "pydantic==2.11.7",
+#   "pydantic-settings==2.10.1",
+#   "rich==14.1.0",
+# ]
+# ///
+
 """
 ```bash
-uv run playground/structify/02_conversation.py --stream --provider openai
+uv run playground/structify/text/02_conversation.py --stream --provider openai
 ```
 """
 
@@ -27,7 +40,7 @@ from rich.text import Text
 from omniadapters.structify.adapters.anthropic import AnthropicAdapter
 from omniadapters.structify.adapters.gemini import GeminiAdapter
 from omniadapters.structify.adapters.openai import OpenAIAdapter
-from playground.structify.config import create_demo_adapter
+from playground.structify.text.settings import create_demo_adapter
 
 console = Console()
 

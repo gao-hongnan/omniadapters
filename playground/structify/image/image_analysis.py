@@ -1,332 +1,311 @@
 # /// script
 # dependencies = [
 #   "openai==1.105.0",
-#   "rich",
+#   "anthropic==0.66.0",
+#   "google-genai==1.33.0",
+#   "instructor==1.10.0",
+#   "jsonref==1.1.0",
+#   "pydantic==2.11.7",
+#   "pydantic-settings==2.10.1",
+#   "rich==14.1.0",
 # ]
 # ///
+
 """
-Image Analysis Demo - Multi-provider Vision Intelligence
+Image Analysis Demo - Multi-provider Vision Intelligence with Streaming
 
 This demo showcases image analysis capabilities across different LLM providers,
 extracting structured information including objects, text, charts, and insights.
 
 Usage:
 
-    # Analyze URL image (example with instructor's test image)
-    uv run playground/structify/multimodal/image_analysis.py \
-        --image-url https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg \
-        --provider openai
+    # Basic analysis with default provider (all)
+    uv run playground/structify/image/image_analysis.py \
+        --image-url https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg
+
+    # Specific provider
+    uv run playground/structify/image/image_analysis.py \
+        --image-url https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg --provider openai
+    uv run playground/structify/image/image_analysis.py \
+        --image-url <url> --provider anthropic
+    uv run playground/structify/image/image_analysis.py \
+        --image-url <url> --provider gemini
+
+    # All providers comparison
+    uv run playground/structify/image/image_analysis.py \
+        --image-url <url> --provider all
+
+    # Streaming mode
+    uv run playground/structify/image/image_analysis.py \
+        --image-url <url> --stream
+    uv run playground/structify/image/image_analysis.py \
+        --image-url https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg --provider openai --stream
+
+    # With trace information
+    uv run playground/structify/image/image_analysis.py \
+        --image-url <url> --trace
+    uv run playground/structify/image/image_analysis.py \
+        --image-url <url> --provider openai --trace
+
+    # Combined options
+    uv run playground/structify/image/image_analysis.py \
+        --image-url <url> --provider all --stream --trace
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import json
-from pathlib import Path
-from typing import Literal, cast
+from typing import Any, Literal, Union, assert_never
 
-from instructor import Mode
-from openai.types.chat import ChatCompletionMessageParam
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, Field
 from rich.console import Console
+from rich.live import Live
 from rich.panel import Panel
+from rich.pretty import pprint
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.syntax import Syntax
+from rich.table import Table
+from rich.text import Text
 
-from omniadapters.core.models import (
-    AnthropicCompletionClientParams,
-    AnthropicProviderConfig,
-    GeminiCompletionClientParams,
-    GeminiProviderConfig,
-    OpenAICompletionClientParams,
-    OpenAIProviderConfig,
-)
-from omniadapters.structify import create_adapter
 from omniadapters.structify.adapters.anthropic import AnthropicAdapter
 from omniadapters.structify.adapters.gemini import GeminiAdapter
 from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import InstructorConfig
-from playground.structify.multimodal.models import ImageAnalysis
-from playground.structify.multimodal.utils import display_analysis_results
+from omniadapters.structify.models import CompletionResult
+from playground.structify.image.settings import create_demo_adapter
 
 console = Console()
 
-
-class Settings(BaseSettings):
-    openai_api_key: str
-    openai_model: str = "gpt-4o"
-
-    anthropic_api_key: str
-    anthropic_model: str = "claude-3-5-sonnet-20241022"
-
-    gemini_api_key: str
-    gemini_model: str = "gemini-2.0-flash-exp"
-
-    model_config = SettingsConfigDict(
-        env_file="playground/structify/multimodal/.env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+SYSTEM_MESSAGE = "You are an expert image analyst. Provide detailed, structured analysis of images."
+USER_PROMPT = "Analyze this image in detail. Identify all objects, text, charts, scene elements, and provide insights."
 
 
-def create_demo_adapter(
-    provider: Literal["openai", "anthropic", "gemini"],
-    settings: Settings,
-) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
+class BoundingBox(BaseModel):
+    x: float = Field(..., description="X coordinate (0-1 normalized)")
+    y: float = Field(..., description="Y coordinate (0-1 normalized)")
+    width: float = Field(..., description="Width (0-1 normalized)")
+    height: float = Field(..., description="Height (0-1 normalized)")
+
+
+class DetectedObject(BaseModel):
+    label: str = Field(..., description="Object label/class")
+    confidence: float = Field(..., ge=0, le=1, description="Detection confidence")
+    bounding_box: Union[BoundingBox, None] = Field(None, description="Object location")
+
+
+class ImageAnalysis(BaseModel):
+    description: str = Field(..., description="Overall image description")
+    detected_objects: list[DetectedObject] = Field(default_factory=list, description="Detected objects")
+    confidence_level: str = Field(default="medium", description="Overall confidence level")
+
+
+def build_provider_message_content(image_url: str, provider: Literal["openai", "anthropic"]) -> Any:
+    """Build provider-specific message content for image analysis"""
     match provider:
         case "openai":
-            return create_adapter(
-                provider_config=OpenAIProviderConfig(api_key=settings.openai_api_key),
-                completion_params=OpenAICompletionClientParams(model=settings.openai_model),
-                instructor_config=InstructorConfig(mode=Mode.TOOLS),
-            )
+            return [{"type": "text", "text": USER_PROMPT}, {"type": "image_url", "image_url": {"url": image_url}}]
         case "anthropic":
-            return create_adapter(
-                provider_config=AnthropicProviderConfig(api_key=settings.anthropic_api_key),
-                completion_params=AnthropicCompletionClientParams(
-                    model=settings.anthropic_model,
-                ),
-                instructor_config=InstructorConfig(mode=Mode.ANTHROPIC_TOOLS),
-            )
-        case "gemini":
-            return create_adapter(
-                provider_config=GeminiProviderConfig(api_key=settings.gemini_api_key),
-                completion_params=GeminiCompletionClientParams(model=settings.gemini_model),
-                instructor_config=InstructorConfig(mode=Mode.GEMINI_JSON),
-            )
+            return [
+                {"type": "text", "text": USER_PROMPT},
+                {"type": "image", "source": {"type": "url", "url": image_url}},
+            ]
+        case _:
+            assert_never(provider)
+
+
+def build_analysis_messages(image_url: str, provider: Literal["openai", "anthropic", "gemini"]) -> list[dict[str, Any]]:
+    """Build messages for image analysis across all providers"""
+    if provider == "gemini":
+        from instructor.multimodal import Image
+
+        return [
+            {"role": "system", "content": SYSTEM_MESSAGE},
+            {"role": "user", "content": [USER_PROMPT, Image.from_url(image_url)]},
+        ]
+    else:
+        return [
+            {"role": "system", "content": SYSTEM_MESSAGE},
+            {"role": "user", "content": build_provider_message_content(image_url, provider)},
+        ]
+
+
+def create_analysis_table(analysis: ImageAnalysis, provider_name: str) -> Table:
+    table = Table(
+        title=f"📸 {provider_name} Image Analysis",
+        show_header=True,
+        header_style="bold magenta",
+    )
+
+    table.add_column("Aspect", style="cyan", width=20)
+    table.add_column("Details", style="white")
+
+    table.add_row("Description", analysis.description)
+
+    if analysis.detected_objects:
+        objects_str = "\n".join(f"✓ {obj.label} ({obj.confidence:.2f})" for obj in analysis.detected_objects[:5])
+        if len(analysis.detected_objects) > 5:
+            objects_str += f"\n... and {len(analysis.detected_objects) - 5} more"
+        table.add_row("Detected Objects", objects_str)
+
+    table.add_row("Confidence", analysis.confidence_level.replace("_", " ").title())
+
+    return table
+
+
+def format_streaming_text(partial: ImageAnalysis) -> Text:
+    text = Text()
+
+    if hasattr(partial, "description") and partial.description:
+        text.append("📷 Description:\n", style="bold cyan")
+        text.append(f"{partial.description}\n", style="white")
+        text.append("\n")
+
+    if hasattr(partial, "detected_objects") and partial.detected_objects:
+        text.append("🎯 Detected Objects:\n", style="bold green")
+        for obj in partial.detected_objects[:5]:
+            text.append(f"   • {obj.label}", style="green")
+            if obj.confidence:
+                text.append(f" ({obj.confidence:.2f})", style="dim green")
+            text.append("\n")
+        text.append("\n")
+
+    return text
+
+
+def display_trace_info(result: CompletionResult[Any, Any]) -> None:
+    json_display = Syntax(
+        code=result.trace.model_dump_json(indent=4, fallback=lambda x: str(x)),
+        lexer="json",
+        theme="monokai",
+        line_numbers=False,
+        word_wrap=True,
+    )
+
+    console.print(
+        Panel(
+            json_display,
+            title="📊 [bold cyan]Trace Information[/bold cyan]",
+            border_style="cyan",
+            padding=(1, 2),
+            expand=False,
+        )
+    )
 
 
 async def analyze_image(
     adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
     image_url: str,
-    provider_name: str,
-    mode: str = "general",
-    show_progress: bool = True,
+    provider: Literal["openai", "anthropic", "gemini"],
+    show_trace: bool = False,
 ) -> ImageAnalysis:
-    system_prompt = {
-        "role": "system",
-        "content": "You are an expert image analyst. Provide detailed, structured analysis of images.",
-    }
+    console.print(Panel.fit(f"🤖 {provider.title()} Analysis", style="bold blue"))
 
-    user_message = {
-        "role": "user",
-        "content": [
-            {"type": "text", "text": "what's in this image?"},
-            {
-                "type": "image_url",
-                "image_url": {"url": image_url},
-            },
-        ],
-    }
+    messages = build_analysis_messages(image_url, provider)
 
-    messages = cast(
-        list[ChatCompletionMessageParam],
-        [
-            system_prompt,
-            user_message,
-        ],
-    )
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+    ) as progress:
+        progress.add_task(description=f"Analyzing image with {provider.title()}...", total=None)
 
-    if show_progress:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            transient=True,
-        ) as progress:
-            progress.add_task(
-                description=f"🔍 Analyzing image with {provider_name}...",
-                total=None,
-            )
-
-            if provider_name.lower() == "anthropic":
-                analysis = await adapter.acreate(
-                    messages=messages,
-                    response_model=ImageAnalysis,
-                    max_tokens=4096,
-                )
-            else:
-                analysis = await adapter.acreate(
-                    messages=messages,
-                    response_model=ImageAnalysis,
-                )
-    else:
-        if provider_name.lower() == "anthropic":
-            analysis = await adapter.acreate(
+        if show_trace:
+            result = await adapter.acreate(
                 messages=messages,
                 response_model=ImageAnalysis,
-                max_tokens=4096,
+                with_hooks=True,
             )
+            pprint(type(result.trace.raw_response))
+            analysis = result.data
+            display_trace_info(result)
         else:
             analysis = await adapter.acreate(
                 messages=messages,
                 response_model=ImageAnalysis,
             )
+            pprint(analysis)
 
-    analysis.provider_metadata["provider"] = provider_name
-    analysis.provider_metadata["mode"] = mode
-
+    console.print(create_analysis_table(analysis, provider.title()))
     return analysis
 
 
-async def batch_analyze(
-    pattern: str,
+async def analyze_image_streaming(
+    adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
+    image_url: str,
     provider: Literal["openai", "anthropic", "gemini"],
-    settings: Settings,
-    mode: str = "general",
-) -> dict[str, ImageAnalysis]:
-    path = Path(pattern)
+) -> ImageAnalysis:
+    console.print(Panel.fit(f"🤖 {provider.title()} Streaming Analysis", style="bold blue"))
+    console.print("[dim]Streaming updates...[/dim]\n")
 
-    if path.is_dir():
-        files = list(path.glob("*.jpg")) + list(path.glob("*.png")) + list(path.glob("*.jpeg"))
-    else:
-        files = list(Path(".").glob(pattern))
+    messages = build_analysis_messages(image_url, provider)
 
-    if not files:
-        console.print(f"[red]No images found matching: {pattern}[/red]")
-        return {}
+    partial_count = 0
+    final_analysis = None
 
-    console.print(f"[green]Found {len(files)} images to analyze[/green]")
+    with Live(console=console, refresh_per_second=30, transient=False) as live:
+        async for partial_analysis in adapter.astream(
+            messages=messages,
+            response_model=ImageAnalysis,
+        ):
+            partial_count += 1
+            final_analysis = partial_analysis
 
-    adapter = create_demo_adapter(provider, settings)
-    results = {}
+            formatted = format_streaming_text(partial_analysis)
+            live.update(formatted)
 
-    try:
-        for i, file_path in enumerate(files, 1):
-            console.print(f"\n[cyan]Processing {i}/{len(files)}: {file_path.name}[/cyan]")
-            analysis = await analyze_image(
-                adapter,
-                file_path.as_uri(),
-                provider,
-                mode,
-                show_progress=True,
-            )
-            results[str(file_path)] = analysis
-            display_analysis_results(analysis, provider)
-    finally:
-        await adapter.aclose()
+            await asyncio.sleep(0.02)
 
-    return results
+    console.print(f"\n[green]✓ Streaming complete! Received {partial_count} partial updates[/green]")
+    if final_analysis:
+        console.print("\n[bold]Final Result:[/bold]")
+        console.print(create_analysis_table(final_analysis, provider.title()))
+
+    return final_analysis or ImageAnalysis(description="Unknown", confidence_level="low", detected_objects=[])
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="Multi-provider image analysis")
+    parser = argparse.ArgumentParser(description="Multi-provider image analysis with streaming support")
     parser.add_argument(
         "--image-url",
         type=str,
-        help="Path or URL to image file",
-    )
-    parser.add_argument(
-        "--batch",
-        type=str,
-        help="Batch process images matching pattern",
+        required=True,
+        help="URL of the image to analyze",
     )
     parser.add_argument(
         "--provider",
         choices=["openai", "anthropic", "gemini", "all"],
         default="all",
-        help="LLM provider to use",
+        help="LLM provider to use (default: all)",
     )
-    parser.add_argument(
-        "--mode",
-        choices=["general", "ocr", "chart", "objects", "scene"],
-        default="general",
-        help="Analysis mode",
-    )
-    parser.add_argument(
-        "--compare",
-        action="store_true",
-        help="Compare results across providers",
-    )
-    parser.add_argument(
-        "--export",
-        choices=["json", "markdown"],
-        help="Export format for results",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        help="Output file path for exports",
-    )
-
+    parser.add_argument("--trace", action="store_true", help="Show trace information")
+    parser.add_argument("--stream", action="store_true", help="Use streaming mode")
     args = parser.parse_args()
-
-    if not args.image_url and not args.batch:
-        parser.error("Either --image or --batch must be specified")
-
-    try:
-        settings = Settings()  # pyright: ignore
-    except Exception as e:
-        console.print(
-            f"[red]Failed to load settings. Create a .env file in playground/structify/multimodal/[/red]\n{e}"
-        )
-        return
 
     console.print(
         Panel.fit(
-            f"📸 [bold]Image Analysis Demo[/bold] 📸\n"
-            f"[dim]Mode: {args.mode.title()} | Provider: {args.provider.title()}[/dim]",
-            style="bold cyan",
+            "📸 [bold]Image Analysis Demo[/bold] 📸\n[dim]Multi-provider vision intelligence with streaming[/dim]",
+            style="bold green",
         )
     )
-
-    if args.batch:
-        batch_provider = cast(
-            Literal["openai", "anthropic", "gemini"],
-            args.provider if args.provider != "all" else "openai",
-        )
-        results = await batch_analyze(
-            args.batch,
-            batch_provider,
-            settings,
-            args.mode,
-        )
-        if args.export:
-            export_path = args.output or "batch_results.json"
-            with open(export_path, "w") as f:
-                json.dump(
-                    {k: v.model_dump() for k, v in results.items()},
-                    f,
-                    indent=2,
-                    default=str,
-                )
-            console.print(f"[green]Results exported to: {export_path}[/green]")
-        return
 
     providers: list[Literal["openai", "anthropic", "gemini"]] = (
         ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider]
     )
 
-    results = {}
-
     for i, provider in enumerate(providers):
-        if i > 0:
+        adapter = create_demo_adapter(provider)
+        try:
+            if args.stream:
+                await analyze_image_streaming(adapter, args.image_url, provider)
+            else:
+                await analyze_image(adapter, args.image_url, provider, show_trace=args.trace)
+        finally:
+            await adapter.aclose()
+
+        if i < len(providers) - 1:
             console.print("\n" + "=" * 50 + "\n")
 
-        try:
-            adapter = create_demo_adapter(provider, settings)
-            try:
-                console.print(f"\n[bold blue]🤖 {provider.title()} Analysis[/bold blue]")
-                analysis = await analyze_image(
-                    adapter,
-                    args.image_url,
-                    provider.title(),
-                    args.mode,
-                )
-                results[provider] = analysis
-
-                display_analysis_results(
-                    analysis,
-                    provider.title(),
-                    show_json=(args.export == "json"),
-                )
-
-            finally:
-                await adapter.aclose()
-
-        except Exception as e:
-            console.print(f"[red]❌ Error with {provider}: {e}[/red]")
-            continue
-
+    console.print("\n" + "=" * 50)
     console.print(Panel.fit("✅ [bold green]Analysis Complete![/bold green]", style="green"))
 
 

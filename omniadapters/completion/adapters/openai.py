@@ -83,12 +83,19 @@ class OpenAIAdapter(
             return None
 
         delta = chunk.choices[0].delta
-        if not delta.content and chunk.choices[0].finish_reason is None:
+        finish_reason = chunk.choices[0].finish_reason
+
+        tool_calls = None
+        if delta.tool_calls:
+            tool_calls = [tc.model_dump() for tc in delta.tool_calls]
+
+        if not delta.content and not tool_calls and finish_reason is None:
             return None
 
         return StreamChunk(
             content=delta.content or "",
             model=chunk.model,
-            finish_reason=chunk.choices[0].finish_reason,
+            finish_reason=finish_reason,
+            tool_calls=tool_calls,
             raw_chunk=chunk,
         )

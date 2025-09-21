@@ -102,18 +102,34 @@ class GeminiAdapter(
 
         candidate = chunk.candidates[0]
         content = ""
+        tool_calls = None
 
         if candidate.content and candidate.content.parts:
             for part in candidate.content.parts:
                 if hasattr(part, "text") and part.text:
                     content += part.text
 
-        if not content and not candidate.finish_reason:
+                if hasattr(part, "function_call"):
+                    function_call = part.function_call
+                    if function_call is not None:
+                        if tool_calls is None:
+                            tool_calls = []
+
+                        call_data: dict[str, Any] = {}
+                        if hasattr(function_call, "name"):
+                            call_data["name"] = function_call.name
+                        if hasattr(function_call, "args"):
+                            call_data["args"] = function_call.args
+
+                        tool_calls.append(call_data)
+
+        if not content and not tool_calls and not candidate.finish_reason:
             return None
 
         return StreamChunk(
             content=content,
             finish_reason=str(candidate.finish_reason) if candidate.finish_reason else None,
+            tool_calls=tool_calls,
             raw_chunk=chunk,
         )
 

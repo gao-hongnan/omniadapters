@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, Generic, Literal
+from typing import Annotated, Any, Generic, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -101,6 +101,7 @@ class StreamChunk(BaseModel):
     content: str
     model: str | None = None
     finish_reason: str | None = None
+    tool_calls: list[dict[str, Any]] | None = None
     raw_chunk: StreamChunkType = Field(exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

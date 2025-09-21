@@ -91,12 +91,35 @@ class AnthropicAdapter(
     def _to_unified_chunk(self, chunk: RawMessageStreamEvent) -> StreamChunk | None:
         if chunk.type == "content_block_delta":
             delta = getattr(chunk, "delta", None)
+
             text_val = getattr(delta, "text", None)
             if isinstance(text_val, str):
                 return StreamChunk(
                     content=text_val,
                     raw_chunk=chunk,
                 )
+
+            partial_json = getattr(delta, "partial_json", None)
+            if partial_json is not None:
+                return StreamChunk(
+                    content="",
+                    tool_calls=[{"partial_json": partial_json}],
+                    raw_chunk=chunk,
+                )
+
+        elif chunk.type == "content_block_start":
+            content_block = getattr(chunk, "content_block", None)
+            if content_block:
+                block_type = getattr(content_block, "type", None)
+                if block_type == "tool_use":
+                    tool_name = getattr(content_block, "name", None)
+                    tool_id = getattr(content_block, "id", None)
+                    return StreamChunk(
+                        content="",
+                        tool_calls=[{"type": "tool_use", "name": tool_name, "id": tool_id}],
+                        raw_chunk=chunk,
+                    )
+
         elif chunk.type == "message_stop":
             return StreamChunk(
                 content="",

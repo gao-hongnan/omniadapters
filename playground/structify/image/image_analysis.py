@@ -12,52 +12,28 @@
 # ///
 
 """
-Image Analysis Demo - Multi-provider Vision Intelligence with Streaming
-
-This demo showcases image analysis capabilities across different LLM providers,
-extracting structured information including objects, text, charts, and insights.
+Multi-provider image analysis with structured extraction.
 
 Usage:
-
-    # Basic analysis with default provider (all)
-    uv run playground/structify/image/image_analysis.py \
-        --image-url https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg
+    # Default (all providers)
+    uv run playground/structify/image/image_analysis.py --image-url <url>
 
     # Specific provider
-    uv run playground/structify/image/image_analysis.py \
-        --image-url https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg --provider openai
-    uv run playground/structify/image/image_analysis.py \
-        --image-url <url> --provider anthropic
-    uv run playground/structify/image/image_analysis.py \
-        --image-url <url> --provider gemini
+    uv run playground/structify/image/image_analysis.py --image-url <url> --provider openai|anthropic|gemini
 
-    # All providers comparison
-    uv run playground/structify/image/image_analysis.py \
-        --image-url <url> --provider all
+    # With streaming and/or tracing
+    uv run playground/structify/image/image_analysis.py --image-url <url> --stream --trace
 
-    # Streaming mode
-    uv run playground/structify/image/image_analysis.py \
-        --image-url <url> --stream
-    uv run playground/structify/image/image_analysis.py \
-        --image-url https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg --provider openai --stream
-
-    # With trace information
-    uv run playground/structify/image/image_analysis.py \
-        --image-url <url> --trace
-    uv run playground/structify/image/image_analysis.py \
-        --image-url <url> --provider openai --trace
-
-    # Combined options
-    uv run playground/structify/image/image_analysis.py \
-        --image-url <url> --provider all --stream --trace
+Example URL: https://raw.githubusercontent.com/gao-hongnan/omniadapters/006f8e3a27ca19a7401f44f32c882b63b3a56e37/playground/assets/chiwawa.png
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-from typing import Any, Literal, Union, assert_never
+from typing import Any, Literal, Union, assert_never, cast
 
+from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.live import Live
@@ -113,20 +89,34 @@ def build_provider_message_content(image_url: str, provider: Literal["openai", "
             assert_never(provider)
 
 
-def build_analysis_messages(image_url: str, provider: Literal["openai", "anthropic", "gemini"]) -> list[dict[str, Any]]:
+def build_analysis_messages(
+    image_url: str, provider: Literal["openai", "anthropic", "gemini"]
+) -> list[ChatCompletionMessageParam]:
     """Build messages for image analysis across all providers"""
     if provider == "gemini":
         from instructor.multimodal import Image
 
-        return [
-            {"role": "system", "content": SYSTEM_MESSAGE},
-            {"role": "user", "content": [USER_PROMPT, Image.from_url(image_url)]},
-        ]
+        return cast(
+            list[ChatCompletionMessageParam],
+            [
+                {"role": "system", "content": SYSTEM_MESSAGE},
+                {
+                    "role": "user",
+                    "content": [
+                        USER_PROMPT,
+                        Image.from_url(image_url),
+                    ],
+                },
+            ],
+        )
     else:
-        return [
-            {"role": "system", "content": SYSTEM_MESSAGE},
-            {"role": "user", "content": build_provider_message_content(image_url, provider)},
-        ]
+        return cast(
+            list[ChatCompletionMessageParam],
+            [
+                {"role": "system", "content": SYSTEM_MESSAGE},
+                {"role": "user", "content": build_provider_message_content(image_url, provider)},
+            ],
+        )
 
 
 def create_analysis_table(analysis: ImageAnalysis, provider_name: str) -> Table:

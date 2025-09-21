@@ -1,3 +1,11 @@
+# /// script
+# dependencies = [
+#   "instructor==1.10.0",
+#   "pydantic==2.11.7",
+#   "pydantic-settings==2.10.1",
+# ]
+# ///
+
 from __future__ import annotations
 
 from functools import lru_cache

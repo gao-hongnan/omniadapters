@@ -1,3 +1,14 @@
+# /// script
+# dependencies = [
+#   "openai==1.105.0",
+#   "anthropic==0.66.0",
+#   "google-genai==1.33.0",
+#   "instructor==1.10.0",
+#   "pydantic==2.11.7",
+#   "rich==14.1.0",
+# ]
+# ///
+
 """
 ```bash
 uv run playground/structify/text/02_conversation.py --stream --provider openai

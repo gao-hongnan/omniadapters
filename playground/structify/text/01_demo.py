@@ -141,7 +141,7 @@ def display_trace_info(result: CompletionResult[Any, Any]) -> None:
     )
 
 
-async def review_movie(
+async def areview_movie(
     adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
     messages: list[ChatCompletionMessageParam],
     provider_name: str,
@@ -175,7 +175,7 @@ async def review_movie(
     return review
 
 
-async def review_movie_streaming(
+async def areview_movie_streaming(
     adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
     messages: list[ChatCompletionMessageParam],
     provider_name: str,
@@ -240,9 +240,9 @@ async def main() -> None:
         adapter = create_demo_adapter(provider)
         try:
             if args.stream:
-                await review_movie_streaming(adapter, messages, provider.title())
+                await areview_movie_streaming(adapter, messages, provider.title())
             else:
-                await review_movie(adapter, messages, provider.title(), show_trace=args.trace)
+                await areview_movie(adapter, messages, provider.title(), show_trace=args.trace)
         finally:
             await adapter.aclose()
 

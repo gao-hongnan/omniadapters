@@ -31,6 +31,10 @@ uv run playground/structify/text/01_demo.py --provider gemini --movie "Dune" --s
 uv run playground/structify/text/01_demo.py --trace --provider all
 uv run playground/structify/text/01_demo.py --provider openai --trace
 uv run playground/structify/text/01_demo.py --provider openai --movie "Interstellar" --stream --trace
+
+# Concurrent demos - process 5 movies simultaneously
+uv run playground/structify/text/01_demo.py --concurrent --provider openai
+uv run playground/structify/text/01_demo.py --concurrent --stream --provider anthropic
 ```
 """
 
@@ -38,6 +42,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import time
 from typing import Any, Literal
 
 from openai.types.chat import (
@@ -207,6 +212,159 @@ async def areview_movie_streaming(
     return final_review or MovieReview(title="Unknown", rating=0, summary="", pros=[], cons=[])
 
 
+async def areview_movies_concurrent(
+    adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
+    movies: list[str],
+    provider_name: str,
+    show_trace: bool = False,
+) -> list[MovieReview]:
+    console.print(
+        Panel.fit(
+            f"🚀 [bold cyan]{provider_name} Concurrent Demo[/bold cyan] - Processing {len(movies)} movies",
+            style="bold blue",
+        )
+    )
+
+    start_time = time.perf_counter()
+
+    messages_list: list[list[ChatCompletionMessageParam]] = [
+        [
+            ChatCompletionSystemMessageParam(role="system", content="You are a helpful movie critic."),
+            ChatCompletionUserMessageParam(role="user", content=f"Review the movie '{movie}' for me."),
+        ]
+        for movie in movies
+    ]
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+        transient=True,
+    ) as progress:
+        tasks = []
+        for _, (movie, messages) in enumerate(zip(movies, messages_list, strict=False)):
+            task_id = progress.add_task(description=f"Reviewing '{movie}'...", total=None)
+
+            async def review_with_progress(msgs: list[ChatCompletionMessageParam], movie_title: str, tid: Any):
+                try:
+                    if show_trace:
+                        result = await adapter.acreate(
+                            messages=msgs,
+                            response_model=MovieReview,
+                            with_hooks=True,
+                        )
+                        progress.update(tid, description=f"✓ '{movie_title}' complete")
+                        return result.data
+                    else:
+                        review = await adapter.acreate(
+                            messages=msgs,
+                            response_model=MovieReview,
+                        )
+                        progress.update(tid, description=f"✓ '{movie_title}' complete")
+                        return review
+                except Exception as e:
+                    progress.update(tid, description=f"✗ '{movie_title}' failed: {e}")
+                    raise
+
+            tasks.append(review_with_progress(messages, movie, task_id))
+
+        reviews: list[MovieReview] = await asyncio.gather(*tasks)
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+
+    console.print(f"\n[green]✓ Concurrent processing complete in {elapsed_time:.2f}s[/green]")
+
+    table = Table(
+        title=f"🎬 Concurrent Results - {provider_name}",
+        show_header=True,
+        header_style="bold magenta",
+    )
+    table.add_column("Movie", style="cyan", width=20)
+    table.add_column("Rating", style="yellow")
+    table.add_column("Summary", style="white", width=50)
+
+    for review in reviews:
+        table.add_row(
+            review.title,
+            f"⭐ {review.rating}/10",
+            review.summary[:100] + "..." if len(review.summary) > 100 else review.summary,
+        )
+
+    console.print(table)
+    return reviews
+
+
+async def areview_movies_concurrent_streaming(
+    adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
+    movies: list[str],
+    provider_name: str,
+) -> list[MovieReview]:
+    console.print(
+        Panel.fit(
+            f"🚀 [bold cyan]{provider_name} Concurrent Streaming Demo[/bold cyan] - Processing {len(movies)} movies",
+            style="bold blue",
+        )
+    )
+
+    start_time = time.perf_counter()
+
+    messages_list: list[list[ChatCompletionMessageParam]] = [
+        [
+            ChatCompletionSystemMessageParam(role="system", content="You are a helpful movie critic."),
+            ChatCompletionUserMessageParam(role="user", content=f"Review the movie '{movie}' for me."),
+        ]
+        for movie in movies
+    ]
+
+    async def stream_movie_review(messages: list[ChatCompletionMessageParam], movie: str) -> MovieReview:
+        console.print(f"\n[dim]Starting stream for '{movie}'...[/dim]")
+        final_review = None
+        partial_count = 0
+
+        async for partial_review in adapter.astream(
+            messages=messages,
+            response_model=MovieReview,
+        ):
+            partial_count += 1
+            final_review = partial_review
+
+            if partial_count % 5 == 0:
+                console.print(f"[dim]'{movie}': Received {partial_count} updates...[/dim]", end="\r")
+
+        console.print(f"[green]✓ '{movie}' streaming complete ({partial_count} updates)[/green]")
+        return final_review or MovieReview(title=movie, rating=0, summary="", pros=[], cons=[])
+
+    reviews = await asyncio.gather(
+        *[stream_movie_review(messages, movie) for messages, movie in zip(messages_list, movies, strict=False)]
+    )
+
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+
+    console.print(f"\n[green]✓ Concurrent streaming complete in {elapsed_time:.2f}s[/green]")
+    console.print(f"[dim]Average time per movie: {elapsed_time / len(movies):.2f}s[/dim]\n")
+
+    table = Table(
+        title=f"🎬 Concurrent Streaming Results - {provider_name}",
+        show_header=True,
+        header_style="bold magenta",
+    )
+    table.add_column("Movie", style="cyan", width=20)
+    table.add_column("Rating", style="yellow")
+    table.add_column("Summary", style="white", width=50)
+
+    for review in reviews:
+        table.add_row(
+            review.title,
+            f"⭐ {review.rating}/10",
+            review.summary[:100] + "..." if len(review.summary) > 100 else review.summary,
+        )
+
+    console.print(table)
+    return reviews
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(description="Movie review with different LLM providers")
     parser.add_argument(
@@ -218,6 +376,7 @@ async def main() -> None:
     parser.add_argument("--movie", default="Inception", help="Movie to review (default: Inception)")
     parser.add_argument("--trace", action="store_true", help="Show trace information")
     parser.add_argument("--stream", action="store_true", help="Use streaming mode")
+    parser.add_argument("--concurrent", action="store_true", help="Run concurrent demo with 3 movies")
     args = parser.parse_args()
 
     console.print(
@@ -227,27 +386,51 @@ async def main() -> None:
         )
     )
 
-    messages: list[ChatCompletionMessageParam] = [
-        ChatCompletionSystemMessageParam(role="system", content="You are a helpful movie critic."),
-        ChatCompletionUserMessageParam(role="user", content=f"Review the movie '{args.movie}' for me."),
-    ]
+    if args.concurrent:
+        movies = ["Inception", "The Matrix", "Blade Runner", "The Lord of the Rings", "The Hobbit"]
 
-    providers: list[Literal["openai", "anthropic", "gemini"]] = (
-        ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider]
-    )
+        console.print(f"\n[bold]Concurrent Mode:[/bold] Processing {len(movies)} movies simultaneously")
+        console.print(f"[dim]Movies: {', '.join(movies)}[/dim]\n")
 
-    for i, provider in enumerate(providers):
-        adapter = create_demo_adapter(provider)
-        try:
-            if args.stream:
-                await areview_movie_streaming(adapter, messages, provider.title())
-            else:
-                await areview_movie(adapter, messages, provider.title(), show_trace=args.trace)
-        finally:
-            await adapter.aclose()
+        providers: list[Literal["openai", "anthropic", "gemini"]] = (  # pyright: ignore[reportRedeclaration]
+            ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider]
+        )
 
-        if i < len(providers) - 1:
-            console.print("\n" + "=" * 50 + "\n")
+        for i, provider in enumerate(providers):
+            adapter = create_demo_adapter(provider)
+            try:
+                if args.stream:
+                    await areview_movies_concurrent_streaming(adapter, movies, provider.title())
+                else:
+                    await areview_movies_concurrent(adapter, movies, provider.title(), show_trace=args.trace)
+            finally:
+                await adapter.aclose()
+
+            if i < len(providers) - 1:
+                console.print("\n" + "=" * 50 + "\n")
+
+    else:
+        messages: list[ChatCompletionMessageParam] = [
+            ChatCompletionSystemMessageParam(role="system", content="You are a helpful movie critic."),
+            ChatCompletionUserMessageParam(role="user", content=f"Review the movie '{args.movie}' for me."),
+        ]
+
+        providers: list[Literal["openai", "anthropic", "gemini"]] = (
+            ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider]
+        )
+
+        for i, provider in enumerate(providers):
+            adapter = create_demo_adapter(provider)
+            try:
+                if args.stream:
+                    await areview_movie_streaming(adapter, messages, provider.title())
+                else:
+                    await areview_movie(adapter, messages, provider.title(), show_trace=args.trace)
+            finally:
+                await adapter.aclose()
+
+            if i < len(providers) - 1:
+                console.print("\n" + "=" * 50 + "\n")
 
     console.print("\n" + "=" * 50)
     console.print(Panel.fit("✅ [bold green]Demo Complete![/bold green]", style="green"))

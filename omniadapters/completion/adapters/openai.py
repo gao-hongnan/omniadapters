@@ -53,13 +53,13 @@ class OpenAIAdapter(
         stream: bool = False,
         **kwargs: Any,
     ) -> ChatCompletion | AsyncIterator[ChatCompletionChunk]:
-        formatted_messages = self._format_messages(messages, **kwargs)
+        formatted_params = self._thanks_instructor(messages, **kwargs)
 
         response = await self.client.chat.completions.create(
-            messages=formatted_messages,
-            model=self.completion_params.model,
+            # messages=formatted_messages,
+            # model=self.completion_params.model,
             stream=stream,
-            extra_body=kwargs,
+            **formatted_params,
         )
         return response
 

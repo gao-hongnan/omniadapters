@@ -1,3 +1,5 @@
+"""Documentation: https://docs.claude.com/en/api/messages"""
+
 from __future__ import annotations
 
 from typing import Any, AsyncIterator, Literal, overload
@@ -54,15 +56,14 @@ class AnthropicAdapter(
         stream: bool = False,
         **kwargs: Any,
     ) -> Message | AsyncIterator[RawMessageStreamEvent]:
-        formatted_messages = self._format_messages(messages, **kwargs)
-
+        formatted_params = self._thanks_instructor(messages, **kwargs)
         # NOTE: least overload needed requires model and max_tokens!
         response = await self.client.messages.create(
-            messages=formatted_messages,
-            model=self.completion_params.model,
-            max_tokens=kwargs.pop("max_tokens", 1024),
+            # messages=formatted_messages,
+            # model=self.completion_params.model,
+            # max_tokens=kwargs.pop("max_tokens", 1024),  # NOTE: anthropic requires `max_tokens` to be specified
             stream=stream,
-            extra_body=kwargs,
+            **formatted_params,
         )
 
         return response

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, AsyncIterator, Generic, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, AsyncIterator, Generic, Literal, overload
 
 from instructor import Mode, handle_response_model
 
@@ -42,22 +42,14 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientMessageT, ClientR
     @abstractmethod
     def _create_client(self) -> ClientT: ...
 
-    def _format_messages(self, messages: list[MessageParam], **kwargs: Any) -> list[ClientMessageT]:
+    def _thanks_instructor(self, messages: list[MessageParam], **kwargs: Any) -> dict[str, Any]:
         _, formatted_params = handle_response_model(
             response_model=None,
             mode=self.instructor_mode,
             messages=messages,
             **kwargs,
         )
-
-        # NOTE: GEMINI uses "contents"
-        if "contents" in formatted_params:
-            formatted_messages = cast(list[ClientMessageT], formatted_params.pop("contents"))
-        else:
-            # NOTE:OpenAI, Anthropic, Azure use "messages"
-            formatted_messages = cast(list[ClientMessageT], formatted_params.pop("messages"))
-
-        return formatted_messages
+        return formatted_params
 
     @overload
     async def agenerate(
@@ -84,6 +76,9 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientMessageT, ClientR
         stream: bool = False,
         **kwargs: Any,
     ) -> CompletionResponse[ClientResponseT] | AsyncIterator[StreamChunk]:
+        # NOTE: Here we do a subtle merge of completion params with kwargs, so if you see
+        # adapter.agenerate(messages) but no kwargs is passed, it does not mean there are no
+        # completion params passed. A little bit of a design flaw - as it violates the principle of least surprise.
         merged_params = {**self.completion_params.model_dump(), **kwargs}
 
         if stream:

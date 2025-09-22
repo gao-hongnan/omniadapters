@@ -49,7 +49,7 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientMessageT, ClientR
             messages=messages,
             **kwargs,
         )
-        return formatted_params
+        return formatted_params  # type: ignore[no-any-return]
 
     @overload
     async def agenerate(

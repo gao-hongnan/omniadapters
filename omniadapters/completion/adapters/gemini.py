@@ -1,11 +1,15 @@
+"""Documentation: https://ai.google.dev/gemini-api/docs/text-generation"""
+
 from __future__ import annotations
 
 import logging
-from typing import Any, AsyncIterator, Literal, cast, overload
+from typing import Any, AsyncIterator, Literal, overload
 
 from google import genai
-from google.genai.types import ContentOrDict, GenerateContentConfigDict, GenerateContentResponse
+from google.genai.types import ContentOrDict, GenerateContentConfig, GenerateContentResponse
 from instructor import Mode
+from instructor.multimodal import extract_genai_multimodal_content
+from instructor.utils import convert_to_genai_messages, extract_genai_system_message, update_genai_kwargs
 
 from omniadapters.completion.adapters.base import BaseAdapter
 from omniadapters.core.models import CompletionResponse, CompletionUsage, GeminiProviderConfig, StreamChunk
@@ -28,6 +32,52 @@ class GeminiAdapter(
     def _create_client(self) -> genai.Client:
         config_dict = self.provider_config.model_dump()
         return genai.Client(**config_dict)
+
+    def _thanks_instructor(self, messages: list[MessageParam], **kwargs: Any) -> dict[str, Any]:
+        """Override cause `handle_genai_structured_outputs` is called when `response_model` is not `None` but we are using `None`."""
+
+        if self.instructor_mode in {Mode.GENAI_STRUCTURED_OUTPUTS, Mode.GENAI_TOOLS}:
+            new_kwargs = kwargs.copy()
+            new_kwargs["messages"] = messages
+            new_kwargs.pop("autodetect_images", False)
+
+            contents = convert_to_genai_messages(messages)  # type: ignore[arg-type]
+            contents = extract_genai_multimodal_content(contents, False)
+            system_message = extract_genai_system_message(messages)
+
+            generation_config = new_kwargs.get("generation_config", {})
+            for param in [
+                "temperature",
+                "max_tokens",
+                "top_p",
+                "top_k",
+                "seed",
+                "presence_penalty",
+                "frequency_penalty",
+                "max_output_tokens",
+            ]:
+                if param in new_kwargs:
+                    generation_config[param] = new_kwargs.pop(param)
+
+            base_config = {"system_instruction": system_message}
+            if generation_config:
+                new_kwargs["generation_config"] = generation_config
+
+            final_config = update_genai_kwargs(new_kwargs, base_config)
+
+            final_kwargs = {}
+            if "model" in new_kwargs:
+                final_kwargs["model"] = new_kwargs["model"]
+            else:
+                # NOTE: If model wasn't in kwargs (due to exclude=True), get it from completion_params
+                final_kwargs["model"] = self.completion_params.model
+            final_kwargs["config"] = GenerateContentConfig(**final_config)
+            final_kwargs["contents"] = contents
+
+            return final_kwargs
+
+        # NOTE: For other modes, use the parent's implementation
+        return super()._thanks_instructor(messages, **kwargs)
 
     @overload
     async def _agenerate(
@@ -54,21 +104,21 @@ class GeminiAdapter(
         stream: bool = False,
         **kwargs: Any,
     ) -> GenerateContentResponse | AsyncIterator[GenerateContentResponse]:
-        formatted_messages = self._format_messages(messages, **kwargs)
-
-        model = self.completion_params.model
+        formatted_params = self._thanks_instructor(messages, **kwargs)
 
         if stream:
             return await self.client.aio.models.generate_content_stream(
-                model=model,
-                contents=formatted_messages,
-                config=cast(GenerateContentConfigDict, kwargs) if kwargs else None,
+                # model=model,
+                # contents=formatted_messages,
+                # config=cast(GenerateContentConfigDict, kwargs) if kwargs else None,
+                **formatted_params,
             )
         else:
             response = await self.client.aio.models.generate_content(
-                model=model,
-                contents=formatted_messages,
-                config=cast(GenerateContentConfigDict, kwargs) if kwargs else None,
+                # model=model,
+                # contents=formatted_messages,
+                # config=cast(GenerateContentConfigDict, kwargs) if kwargs else None,
+                **formatted_params,
             )
             return response
 

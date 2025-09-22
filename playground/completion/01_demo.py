@@ -295,7 +295,7 @@ async def main() -> None:
     )
 
     messages: list[MessageParam] = [
-        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "system", "content": "Always start your response with 'Hello, world!'"},
         {"role": "user", "content": args.prompt},
     ]
 

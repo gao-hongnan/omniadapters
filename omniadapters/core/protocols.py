@@ -4,11 +4,29 @@ from types import TracebackType
 from typing import Protocol, Self, runtime_checkable
 
 
-@runtime_checkable
+@runtime_checkable  # NOTE: for `isinstance` check
 class AsyncCloseable(Protocol):
-    """Protocol for clients with async close method."""
+    """Protocol for clients with an async `close` method."""
 
     async def close(self) -> None: ...
+
+
+@runtime_checkable
+class AsyncACloseable(Protocol):
+    """Protocol for clients with an async `aclose` method."""
+
+    async def aclose(self) -> None: ...
+
+
+@runtime_checkable
+class GeminiAClose(Protocol):
+    """Protocol for clients exposing an `aio` attribute with `aclose`.
+
+    Example: `google.genai.Client` where `client.aio` has `aclose`.
+    """
+
+    @property
+    def aio(self) -> AsyncACloseable: ...
 
 
 @runtime_checkable

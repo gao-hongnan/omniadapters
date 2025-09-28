@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Generic, Literal, overload
 from instructor import AsyncInstructor
 from openai.types.chat import ChatCompletionMessageParam
 
-from omniadapters.core.protocols import AsyncCloseable, AsyncContextManager
+from omniadapters.core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
 from omniadapters.core.types import ClientResponseT, ClientT, ProviderConfigT, StructuredResponseT
 from omniadapters.structify.hooks import ahook_instructor
 from omniadapters.structify.models import CompletionResult
@@ -160,7 +160,11 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientResponseT]):
         if self._client is None:
             return
 
-        if isinstance(self._client, AsyncCloseable):
+        if isinstance(self._client, GeminiAClose):
+            await self._client.aio.aclose()
+        elif isinstance(self._client, AsyncACloseable):
+            await self._client.aclose()
+        elif isinstance(self._client, AsyncCloseable):
             await self._client.close()
         elif isinstance(self._client, AsyncContextManager):
             await self._client.__aexit__(None, None, None)

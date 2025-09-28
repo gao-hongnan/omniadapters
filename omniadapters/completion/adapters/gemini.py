@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any, AsyncIterator, Literal, overload
 
 from google import genai
@@ -182,14 +181,3 @@ class GeminiAdapter(
             tool_calls=tool_calls,
             raw_chunk=chunk,
         )
-
-    async def aclose(self) -> None:
-        """Can't seem to find gemini's closure method so we custom close the adapter and cleanup resources."""
-        try:
-            if self._client:
-                self._client._api_client._httpx_client.close()
-                await self._client._api_client._async_httpx_client.aclose()
-        except Exception as e:
-            logging.warning(f"Error closing Gemini client: {e}")
-        finally:
-            await super().aclose()

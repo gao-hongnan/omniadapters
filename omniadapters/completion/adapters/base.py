@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Generic, Literal, overload
 
 from instructor import Mode, handle_response_model
 
-from omniadapters.core.protocols import AsyncCloseable, AsyncContextManager
+from omniadapters.core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
 from omniadapters.core.types import (
     ClientMessageT,
     ClientResponseT,
@@ -130,7 +130,11 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientMessageT, ClientR
         if self._client is None:
             return
 
-        if isinstance(self._client, AsyncCloseable):
+        if isinstance(self._client, GeminiAClose):
+            await self._client.aio.aclose()
+        elif isinstance(self._client, AsyncACloseable):
+            await self._client.aclose()
+        elif isinstance(self._client, AsyncCloseable):
             await self._client.close()
         elif isinstance(self._client, AsyncContextManager):
             await self._client.__aexit__(None, None, None)

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omniadapters"
-version = "17.0.0"
+version = "18.0.0"
 description = "A collection of code for omniadapters - unified interfaces for LLM providers."
 authors = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
 maintainers = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]

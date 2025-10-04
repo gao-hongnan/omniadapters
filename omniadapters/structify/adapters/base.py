@@ -87,7 +87,7 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientResponseT]):
         in which they will convert and unify to the provider's client message type."""
         captured: CompletionTrace[ClientResponseT]
         # NOTE: Merge completion params with kwargs, letting kwargs override
-        completion_kwargs = {**self.completion_params.model_dump(), **kwargs}
+        completion_kwargs = {**self.completion_params.model_dump(exclude_none=True), **kwargs}
 
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
             response = await self.instructor.create(
@@ -133,7 +133,7 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientResponseT]):
         **kwargs: Any,
     ) -> AsyncIterator[StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]]:
         captured: CompletionTrace[ClientResponseT]
-        completion_kwargs = {**self.completion_params.model_dump(), **kwargs}
+        completion_kwargs = {**self.completion_params.model_dump(exclude_none=True), **kwargs}
 
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
             async for partial in self.instructor.create_partial(

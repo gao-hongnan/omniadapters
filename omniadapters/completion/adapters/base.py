@@ -79,7 +79,8 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientMessageT, ClientR
         # NOTE: Here we do a subtle merge of completion params with kwargs, so if you see
         # adapter.agenerate(messages) but no kwargs is passed, it does not mean there are no
         # completion params passed. A little bit of a design flaw - as it violates the principle of least surprise.
-        merged_params = {**self.completion_params.model_dump(), **kwargs}
+        # NOTE: `temparature` for example is not supported as a param in payload for thinking models say gpt-5-mini, so we need exclude_none=True so if temperature is None, it will not be included in the payload.
+        merged_params = {**self.completion_params.model_dump(exclude_none=True), **kwargs}
 
         if stream:
             stream_response = await self._agenerate(messages, stream=True, **merged_params)

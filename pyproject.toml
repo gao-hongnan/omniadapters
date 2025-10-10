@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omniadapters"
-version = "19.0.0"
+version = "20.0.0"
 description = "A collection of code for omniadapters - unified interfaces for LLM providers."
 authors = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
 maintainers = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
@@ -37,18 +37,18 @@ classifiers = [
 ]
 
 dependencies = [
-    "pydantic>=2.11.7",
-    "pydantic-settings>=2.10.1",
-    "anthropic>=0.59.0",
-    "google-genai>=1.39.1",
-    "openai>=1.97.1",
-    "instructor==1.10.0",
-    "jsonref>=1.1.0",
+    "pydantic>=2.12.0,<2.13.0",
+    "pydantic-settings>=2.11.0,<2.12.0",
+    "anthropic>=0.69.0,<1.0.0",
+    "google-genai>=1.42.0,<1.50.0",
+    "openai>=1.109.1,<3.0.0",
+    "instructor>=1.11.3,<1.12.0",
+    "jsonref>=1.1.0,<2.0.0",
 ]
 
 [project.optional-dependencies]
 playground = [
-    "pydanticonf>=1.0.0",
+    "pydanticonf>=1.0.0,<10.0.0",
 ]
 
 [dependency-groups]
@@ -77,14 +77,14 @@ test = [
 ]
 
 docs = [
-    "jupyter-book==1.0.4.post1",
-    "myst-nb",
-    "sphinx-copybutton",
-    "sphinxcontrib-mermaid",
-    "sphinx-proof",
-    "sphinxcontrib-bibtex",
-    "sphinx-togglebutton",
-    "sphinx-design",
+    "jupyter-book>=1.0.4,<1.1.0",
+    "myst-nb>=1.0.0,<2.0.0",
+    "sphinx-copybutton>=0.5.0,<1.0.0",
+    "sphinxcontrib-mermaid>=0.9.0,<2.0.0",
+    "sphinx-proof>=0.1.0,<1.0.0",
+    "sphinxcontrib-bibtex>=2.0.0,<3.0.0",
+    "sphinx-togglebutton>=0.3.0,<1.0.0",
+    "sphinx-design>=0.5.0,<1.0.0",
 ]
 
 dev = [

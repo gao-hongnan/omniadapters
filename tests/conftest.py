@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import instructor
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from omniadapters.core.models import (
@@ -81,17 +81,17 @@ skip_without_api_keys = pytest.mark.skipif(
 
 @pytest.fixture
 def openai_provider_config(test_settings: TestSettings) -> OpenAIProviderConfig:
-    return OpenAIProviderConfig(api_key=test_settings.openai_api_key)
+    return OpenAIProviderConfig(api_key=SecretStr(test_settings.openai_api_key))
 
 
 @pytest.fixture
 def anthropic_provider_config(test_settings: TestSettings) -> AnthropicProviderConfig:
-    return AnthropicProviderConfig(api_key=test_settings.anthropic_api_key)
+    return AnthropicProviderConfig(api_key=SecretStr(test_settings.anthropic_api_key))
 
 
 @pytest.fixture
 def gemini_provider_config(test_settings: TestSettings) -> GeminiProviderConfig:
-    return GeminiProviderConfig(api_key=test_settings.gemini_api_key)
+    return GeminiProviderConfig(api_key=SecretStr(test_settings.gemini_api_key))
 
 
 @pytest.fixture
@@ -226,15 +226,7 @@ pytest_plugins = ["pytest_asyncio"]
 
 
 async def cleanup_adapter(adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter) -> None:
-    """Helper function to properly close adapter clients."""
-    if hasattr(adapter, "aclose"):
-        await adapter.aclose()
-    elif hasattr(adapter, "_client") and adapter._client is not None:
-        client = adapter._client
-        if hasattr(client, "close"):
-            await client.close()
-        elif hasattr(client, "_client") and hasattr(client._client, "close"):
-            await client._client.close()
+    await adapter.aclose()
 
 
 @pytest.fixture(autouse=True)
@@ -267,7 +259,8 @@ def pytest_configure(config: pytest.Config) -> None:
     )
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:  # noqa: ARG001
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    _ = config
     for item in items:
         if "integration" in str(item.fspath):
             item.add_marker(pytest.mark.integration)

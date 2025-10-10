@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import instructor
 import pytest
 from openai import AsyncOpenAI
+from pydantic import SecretStr
 
 from omniadapters.core.models import (
     OpenAICompletionClientParams,
@@ -20,7 +21,7 @@ from omniadapters.structify.models import InstructorConfig
 @pytest.mark.unit
 class TestAdapterThreadSafety:
     def test_concurrent_client_access_thread_safety(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -57,7 +58,7 @@ class TestAdapterThreadSafety:
         assert all(client is clients[0] for client in clients), "Multiple client instances created!"
 
     def test_concurrent_instructor_access_thread_safety(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -94,7 +95,7 @@ class TestAdapterThreadSafety:
         assert all(instructor is instructors[0] for instructor in instructors), "Multiple instructor instances created!"
 
     def test_stress_test_concurrent_access(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -153,7 +154,7 @@ class TestAdapterThreadSafety:
                 time.sleep(0.01)
                 return super()._with_instructor()
 
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -180,7 +181,7 @@ class TestAdapterThreadSafety:
 
     @pytest.mark.asyncio
     async def test_thread_safety_in_async_context(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -206,7 +207,7 @@ class TestAdapterThreadSafety:
         assert all(instructor is instructors[0] for instructor in instructors)
 
     def test_no_deadlock_with_nested_access(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 

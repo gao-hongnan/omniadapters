@@ -4,7 +4,7 @@ from typing import Any
 
 import instructor
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, SecretStr, ValidationError
 
 from omniadapters.core.enums import Capability, Provider
 from omniadapters.core.models import (
@@ -45,26 +45,26 @@ class TestAllowable:
 @pytest.mark.unit
 class TestProviderConfigs:
     def test_openai_provider_config(self) -> None:
-        config = OpenAIProviderConfig(api_key="test_key")
+        config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
 
         assert config.provider == Provider.OPENAI.value
         assert config.api_key.get_secret_value() == "test_key"
 
     def test_anthropic_provider_config(self) -> None:
-        config = AnthropicProviderConfig(api_key="test_key")
+        config = AnthropicProviderConfig(api_key=SecretStr("test_key"))
 
         assert config.provider == Provider.ANTHROPIC.value
         assert config.api_key.get_secret_value() == "test_key"
 
     def test_gemini_provider_config(self) -> None:
-        config = GeminiProviderConfig(api_key="test_key")
+        config = GeminiProviderConfig(api_key=SecretStr("test_key"))
 
         assert config.provider == Provider.GEMINI.value
         assert config.api_key.get_secret_value() == "test_key"
 
     def test_provider_config_extra_fields(self) -> None:
         config = OpenAIProviderConfig(
-            api_key="test_key",
+            api_key=SecretStr("test_key"),
             organization="test_org",  # type: ignore[call-arg]
             base_url="https://custom.openai.com",  # type: ignore[call-arg]
         )
@@ -75,7 +75,7 @@ class TestProviderConfigs:
         assert data["base_url"] == "https://custom.openai.com"
 
     def test_provider_config_exclude_provider(self) -> None:
-        config = OpenAIProviderConfig(api_key="test_key")
+        config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         data = config.model_dump()
 
         assert "provider" not in data
@@ -141,21 +141,21 @@ class TestDiscriminatedUnions:
     def test_provider_config_union_openai(self) -> None:
         config_data = {"api_key": "test_key"}
 
-        config = OpenAIProviderConfig(api_key=config_data["api_key"])
+        config = OpenAIProviderConfig(api_key=SecretStr(config_data["api_key"]))
         assert isinstance(config, OpenAIProviderConfig)
         assert config.provider == Provider.OPENAI.value
 
     def test_provider_config_union_anthropic(self) -> None:
         config_data = {"api_key": "test_key"}
 
-        config = AnthropicProviderConfig(api_key=config_data["api_key"])
+        config = AnthropicProviderConfig(api_key=SecretStr(config_data["api_key"]))
         assert isinstance(config, AnthropicProviderConfig)
         assert config.provider == Provider.ANTHROPIC.value
 
     def test_provider_config_union_gemini(self) -> None:
         config_data = {"api_key": "test_key"}
 
-        config = GeminiProviderConfig(api_key=config_data["api_key"])
+        config = GeminiProviderConfig(api_key=SecretStr(config_data["api_key"]))
         assert isinstance(config, GeminiProviderConfig)
         assert config.provider == Provider.GEMINI.value
 
@@ -313,7 +313,7 @@ class TestCompletionResult:
 class TestConfigSerialization:
     def test_provider_config_round_trip(self) -> None:
         original = OpenAIProviderConfig(
-            api_key="test_key",
+            api_key=SecretStr("test_key"),
             organization="test_org",  # type: ignore[call-arg]
         )
 
@@ -355,7 +355,7 @@ class TestConfigSerialization:
 @pytest.mark.unit
 class TestConfigValidation:
     def test_empty_api_key_validation(self) -> None:
-        config = OpenAIProviderConfig(api_key="")
+        config = OpenAIProviderConfig(api_key=SecretStr(""))
         assert config.api_key.get_secret_value() == ""
 
     def test_empty_model_validation(self) -> None:
@@ -367,7 +367,7 @@ class TestConfigValidation:
             InstructorConfig(mode="invalid_mode")  # type: ignore[arg-type]
 
     def test_config_immutability(self) -> None:
-        config = OpenAIProviderConfig(api_key="test_key")
+        config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
 
         updated_config = config.model_copy(update={"api_key": "new_key"})
 

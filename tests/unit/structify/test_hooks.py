@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,6 +10,7 @@ from instructor.hooks import HookName
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
 
+from omniadapters.core.types import MessageParam
 from omniadapters.structify.hooks import (
     CompletionTrace,
     HookHandler,
@@ -38,7 +39,7 @@ class TestCompletionTrace:
 
     def test_completion_trace_with_data(self) -> None:
         kwargs = {"model": "gpt-4", "temperature": 0.7}
-        messages = [{"role": "user", "content": "test"}]
+        messages = cast(list[MessageParam], [{"role": "user", "content": "test"}])
         parsed = SampleModel(name="test", value=42)
         error = Exception("test error")
 

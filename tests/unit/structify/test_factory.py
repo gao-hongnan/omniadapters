@@ -4,6 +4,7 @@ from typing import Literal, cast
 
 import instructor
 import pytest
+from pydantic import SecretStr
 
 from omniadapters.core.models import (
     AnthropicCompletionClientParams,
@@ -24,7 +25,7 @@ from omniadapters.structify.models import InstructorConfig
 @pytest.mark.unit
 class TestAdapterRegistry:
     def test_create_openai_adapter(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -40,7 +41,7 @@ class TestAdapterRegistry:
         assert adapter.instructor_config == instructor_config
 
     def test_create_anthropic_adapter(self) -> None:
-        provider_config = AnthropicProviderConfig(api_key="test_key")
+        provider_config = AnthropicProviderConfig(api_key=SecretStr("test_key"))
         completion_params = AnthropicCompletionClientParams(model="claude-3-sonnet-20240229")
         instructor_config = InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS)
 
@@ -56,7 +57,7 @@ class TestAdapterRegistry:
         assert adapter.instructor_config == instructor_config
 
     def test_create_gemini_adapter(self) -> None:
-        provider_config = GeminiProviderConfig(api_key="test_key")
+        provider_config = GeminiProviderConfig(api_key=SecretStr("test_key"))
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
 
@@ -72,7 +73,7 @@ class TestAdapterRegistry:
         assert adapter.instructor_config == instructor_config
 
     def test_factory_type_safety_openai(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -88,7 +89,7 @@ class TestAdapterRegistry:
         assert adapter.provider_config.provider == "openai"
 
     def test_factory_type_safety_anthropic(self) -> None:
-        provider_config = AnthropicProviderConfig(api_key="test_key")
+        provider_config = AnthropicProviderConfig(api_key=SecretStr("test_key"))
         completion_params = AnthropicCompletionClientParams(model="claude-3-sonnet")
         instructor_config = InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS)
 
@@ -103,7 +104,7 @@ class TestAdapterRegistry:
         assert adapter.provider_config.provider == "anthropic"
 
     def test_factory_type_safety_gemini(self) -> None:
-        provider_config = GeminiProviderConfig(api_key="test_key")
+        provider_config = GeminiProviderConfig(api_key=SecretStr("test_key"))
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
 
@@ -120,7 +121,7 @@ class TestAdapterRegistry:
     def test_factory_preserves_config_attributes(self) -> None:
         provider_config = OpenAIProviderConfig.model_validate(
             {
-                "api_key": "test_key",
+                "api_key": SecretStr("test_key"),
                 "organization": "test_org",
                 "base_url": "https://custom.openai.com",
             }
@@ -161,7 +162,7 @@ class TestAdapterRegistry:
         assert instructor_data["max_retries"] == 3
 
     def test_factory_immutability(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -184,7 +185,7 @@ class TestAdapterRegistry:
         assert adapter.instructor_config is instructor_config
 
     def test_factory_with_minimal_config(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -202,7 +203,7 @@ class TestAdapterRegistry:
     def test_factory_with_maximal_config(self) -> None:
         provider_config = OpenAIProviderConfig.model_validate(
             {
-                "api_key": "test_key",
+                "api_key": SecretStr("test_key"),
                 "organization": "test_org",
                 "base_url": "https://custom.openai.com",
                 "timeout": 30.0,
@@ -263,28 +264,28 @@ class TestFactoryErrorHandling:
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
         openai_adapter = create_adapter(
-            provider_config=OpenAIProviderConfig(api_key="test"),
+            provider_config=OpenAIProviderConfig(api_key=SecretStr("test")),
             completion_params=OpenAICompletionClientParams(model="gpt-4"),
             instructor_config=instructor_config,
         )
         assert openai_adapter.provider_config.provider == Provider.OPENAI.value
 
         anthropic_adapter = create_adapter(
-            provider_config=AnthropicProviderConfig(api_key="test"),
+            provider_config=AnthropicProviderConfig(api_key=SecretStr("test")),
             completion_params=AnthropicCompletionClientParams(model="claude-3"),
             instructor_config=instructor_config,
         )
         assert anthropic_adapter.provider_config.provider == Provider.ANTHROPIC.value
 
         gemini_adapter = create_adapter(
-            provider_config=GeminiProviderConfig(api_key="test"),
+            provider_config=GeminiProviderConfig(api_key=SecretStr("test")),
             completion_params=GeminiCompletionClientParams(model="gemini-pro"),
             instructor_config=instructor_config,
         )
         assert gemini_adapter.provider_config.provider == Provider.GEMINI.value
 
     def test_factory_lazy_initialization(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -299,11 +300,11 @@ class TestFactoryErrorHandling:
         assert adapter.instructor_config is not None
 
     def test_factory_multiple_instances_independence(self) -> None:
-        provider_config1 = OpenAIProviderConfig(api_key="test_key_1")
+        provider_config1 = OpenAIProviderConfig(api_key=SecretStr("test_key_1"))
         completion_params1 = OpenAICompletionClientParams(model="gpt-4")
         instructor_config1 = InstructorConfig(mode=instructor.Mode.TOOLS)
 
-        provider_config2 = OpenAIProviderConfig(api_key="test_key_2")
+        provider_config2 = OpenAIProviderConfig(api_key=SecretStr("test_key_2"))
         completion_params2 = OpenAICompletionClientParams(model="gpt-3.5-turbo")
         instructor_config2 = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -332,7 +333,7 @@ class TestFactoryErrorHandling:
 @pytest.mark.unit
 class TestFactoryTypeAnnotations:
     def test_factory_return_type_openai(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -347,7 +348,7 @@ class TestFactoryTypeAnnotations:
         assert hasattr(adapter, "_with_instructor")
 
     def test_factory_return_type_anthropic(self) -> None:
-        provider_config = AnthropicProviderConfig(api_key="test_key")
+        provider_config = AnthropicProviderConfig(api_key=SecretStr("test_key"))
         completion_params = AnthropicCompletionClientParams(model="claude-3")
         instructor_config = InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS)
 
@@ -362,7 +363,7 @@ class TestFactoryTypeAnnotations:
         assert hasattr(adapter, "_with_instructor")
 
     def test_factory_return_type_gemini(self) -> None:
-        provider_config = GeminiProviderConfig(api_key="test_key")
+        provider_config = GeminiProviderConfig(api_key=SecretStr("test_key"))
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
 
@@ -380,7 +381,7 @@ class TestFactoryTypeAnnotations:
         class InvalidProviderConfig(BaseProviderConfig):
             provider: Literal["invalid"] = "invalid"
 
-        invalid_config = InvalidProviderConfig(api_key="test_key")
+        invalid_config = InvalidProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -401,11 +402,11 @@ class TestFactoryTypeAnnotations:
             "DynamicProviderConfig",
             (BaseProviderConfig,),
             {
-                "__annotations__": {"provider": Literal["dynamic_invalid"], "api_key": str},
+                "__annotations__": {"provider": Literal["dynamic_invalid"], "api_key": SecretStr},
                 "provider": "dynamic_invalid",
             },
         )
-        invalid_config = DynamicProviderConfig(api_key="test")
+        invalid_config = DynamicProviderConfig(api_key=SecretStr("test"))
 
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
@@ -421,21 +422,21 @@ class TestFactoryTypeAnnotations:
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
         openai_adapter = create_adapter(
-            provider_config=OpenAIProviderConfig(api_key="test"),
+            provider_config=OpenAIProviderConfig(api_key=SecretStr("test")),
             completion_params=OpenAICompletionClientParams(model="gpt-4"),
             instructor_config=instructor_config,
         )
         assert isinstance(openai_adapter, OpenAIAdapter)
 
         anthropic_adapter = create_adapter(
-            provider_config=AnthropicProviderConfig(api_key="test"),
+            provider_config=AnthropicProviderConfig(api_key=SecretStr("test")),
             completion_params=AnthropicCompletionClientParams(model="claude-3"),
             instructor_config=instructor_config,
         )
         assert isinstance(anthropic_adapter, AnthropicAdapter)
 
         gemini_adapter = create_adapter(
-            provider_config=GeminiProviderConfig(api_key="test"),
+            provider_config=GeminiProviderConfig(api_key=SecretStr("test")),
             completion_params=GeminiCompletionClientParams(model="gemini-pro"),
             instructor_config=instructor_config,
         )

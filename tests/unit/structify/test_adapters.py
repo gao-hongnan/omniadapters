@@ -9,7 +9,7 @@ from anthropic import AsyncAnthropic
 from google import genai
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 
 from omniadapters.core.models import (
     AnthropicCompletionClientParams,
@@ -34,7 +34,7 @@ class SampleModel(BaseModel):
 @pytest.mark.unit
 class TestBaseAdapter:
     def test_base_adapter_initialization(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -51,7 +51,7 @@ class TestBaseAdapter:
         assert hasattr(adapter, "_instructor") and getattr(adapter, "_instructor", None) is None
 
     def test_lazy_client_initialization(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -73,7 +73,7 @@ class TestBaseAdapter:
             mock_create.assert_called_once()
 
     def test_lazy_instructor_initialization(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -99,7 +99,7 @@ class TestBaseAdapter:
 class TestOpenAIAdapter:
     def test_create_client(self) -> None:
         provider_config = OpenAIProviderConfig(
-            api_key="test_key",
+            api_key=SecretStr("test_key"),
         )
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
@@ -122,7 +122,7 @@ class TestOpenAIAdapter:
             assert client == mock_client
 
     def test_with_instructor(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -148,7 +148,7 @@ class TestOpenAIAdapter:
 
     @pytest.mark.asyncio
     async def test_acreate_without_hooks(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -183,7 +183,7 @@ class TestOpenAIAdapter:
 
     @pytest.mark.asyncio
     async def test_acreate_with_hooks(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -221,7 +221,7 @@ class TestOpenAIAdapter:
 
     @pytest.mark.asyncio
     async def test_astream(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -263,7 +263,7 @@ class TestOpenAIAdapter:
 class TestAnthropicAdapter:
     def test_create_client(self) -> None:
         provider_config = AnthropicProviderConfig(
-            api_key="test_key",
+            api_key=SecretStr("test_key"),
         )
         completion_params = AnthropicCompletionClientParams(model="claude-3-sonnet")
         instructor_config = InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS)
@@ -286,7 +286,7 @@ class TestAnthropicAdapter:
             assert client == mock_client
 
     def test_with_instructor(self) -> None:
-        provider_config = AnthropicProviderConfig(api_key="test_key")
+        provider_config = AnthropicProviderConfig(api_key=SecretStr("test_key"))
         completion_params = AnthropicCompletionClientParams(model="claude-3-sonnet")
         instructor_config = InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS)
 
@@ -314,7 +314,7 @@ class TestAnthropicAdapter:
 @pytest.mark.unit
 class TestGeminiAdapter:
     def test_create_client(self) -> None:
-        provider_config = GeminiProviderConfig(api_key="test_key")
+        provider_config = GeminiProviderConfig(api_key=SecretStr("test_key"))
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
 
@@ -334,7 +334,7 @@ class TestGeminiAdapter:
             assert client == mock_client
 
     def test_with_instructor(self) -> None:
-        provider_config = GeminiProviderConfig(api_key="test_key")
+        provider_config = GeminiProviderConfig(api_key=SecretStr("test_key"))
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
 
@@ -362,7 +362,7 @@ class TestGeminiAdapter:
 
     @pytest.mark.asyncio
     async def test_acreate_gemini_specific(self) -> None:
-        provider_config = GeminiProviderConfig(api_key="test_key")
+        provider_config = GeminiProviderConfig(api_key=SecretStr("test_key"))
         completion_params = GeminiCompletionClientParams(
             model="gemini-pro",
         )
@@ -409,7 +409,7 @@ class TestGeminiAdapter:
 class TestAdapterErrorHandling:
     @pytest.mark.asyncio
     async def test_adapter_handles_instructor_errors(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -431,7 +431,7 @@ class TestAdapterErrorHandling:
             )
 
     def test_adapter_parameter_validation(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="test_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
@@ -446,7 +446,7 @@ class TestAdapterErrorHandling:
         assert adapter.instructor_config == instructor_config
 
     def test_adapter_client_creation_failure(self) -> None:
-        provider_config = OpenAIProviderConfig(api_key="invalid_key")
+        provider_config = OpenAIProviderConfig(api_key=SecretStr("invalid_key"))
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 

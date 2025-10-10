@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 from anthropic.types import Message, MessageStreamEvent
 from anthropic.types import MessageParam as AnthropicMessageParam
 from google.genai.types import ContentOrDict, GenerateContentResponse
-from instructor.multimodal import Audio, Image
+from instructor.processing.multimodal import Audio, Image
 from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam
 from pydantic import BaseModel
 

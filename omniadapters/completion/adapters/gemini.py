@@ -7,8 +7,12 @@ from typing import Any, AsyncIterator, Literal, overload
 from google import genai
 from google.genai.types import ContentOrDict, GenerateContentConfig, GenerateContentResponse
 from instructor import Mode
-from instructor.multimodal import extract_genai_multimodal_content
-from instructor.utils import convert_to_genai_messages, extract_genai_system_message, update_genai_kwargs
+from instructor.processing.multimodal import extract_genai_multimodal_content
+from instructor.providers.gemini.utils import (
+    convert_to_genai_messages,
+    extract_genai_system_message,
+    update_genai_kwargs,
+)
 
 from omniadapters.completion.adapters.base import BaseAdapter
 from omniadapters.core.models import CompletionResponse, CompletionUsage, GeminiProviderConfig, StreamChunk

@@ -18,8 +18,7 @@ if TYPE_CHECKING:
 
 class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateContentResponse]):
     def _create_client(self) -> genai.Client:
-        config_dict = self.provider_config.model_dump()
-        return genai.Client(**config_dict)
+        return genai.Client(**self.provider_config.get_client_kwargs())
 
     def _with_instructor(self) -> instructor.AsyncInstructor:
         client: genai.Client = self.client

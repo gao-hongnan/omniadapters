@@ -10,7 +10,7 @@ from omniadapters.structify.adapters.base import BaseAdapter
 
 class AnthropicAdapter(BaseAdapter[AnthropicProviderConfig, AsyncAnthropic, AnthropicResponse]):
     def _create_client(self) -> AsyncAnthropic:
-        return AsyncAnthropic(**self.provider_config.model_dump())
+        return AsyncAnthropic(**self.provider_config.get_client_kwargs())
 
     def _with_instructor(self) -> instructor.AsyncInstructor:
         client: AsyncAnthropic = self.client

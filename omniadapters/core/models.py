@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Generic, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from omniadapters.core.enums import Capability, Provider
 from omniadapters.core.types import ClientResponseT, StreamChunkType
@@ -13,7 +13,12 @@ class Allowable(BaseModel):
 
 
 class BaseProviderConfig(Allowable):
-    api_key: str  # NOTE: All 3 big providers names this `api_key` - do a drift check if really need rename this or remove this field.
+    api_key: SecretStr
+
+    def get_client_kwargs(self) -> dict[str, Any]:
+        data = self.model_dump()
+        data["api_key"] = self.api_key.get_secret_value()
+        return data
 
 
 class OpenAIProviderConfig(BaseProviderConfig):

@@ -28,8 +28,7 @@ class AnthropicAdapter(
         return Mode.ANTHROPIC_TOOLS
 
     def _create_client(self) -> AsyncAnthropic:
-        config_dict = self.provider_config.model_dump()
-        return AsyncAnthropic(**config_dict)
+        return AsyncAnthropic(**self.provider_config.get_client_kwargs())
 
     @overload
     async def _agenerate(

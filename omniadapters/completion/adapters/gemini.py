@@ -29,8 +29,7 @@ class GeminiAdapter(
         return Mode.GENAI_STRUCTURED_OUTPUTS
 
     def _create_client(self) -> genai.Client:
-        config_dict = self.provider_config.model_dump()
-        return genai.Client(**config_dict)
+        return genai.Client(**self.provider_config.get_client_kwargs())
 
     def _thanks_instructor(self, messages: list[MessageParam], **kwargs: Any) -> dict[str, Any]:
         """Override cause `handle_genai_structured_outputs` is called when `response_model` is not `None` but we are using `None`."""

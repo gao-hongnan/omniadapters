@@ -145,7 +145,7 @@ class TestAdapterRegistry:
             instructor_config=instructor_config,
         )
 
-        assert adapter.provider_config.api_key == "test_key"
+        assert adapter.provider_config.api_key.get_secret_value() == "test_key"
         assert adapter.completion_params.model == "gpt-4"
         assert adapter.instructor_config.mode == instructor.Mode.TOOLS
 
@@ -165,7 +165,7 @@ class TestAdapterRegistry:
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
-        original_api_key = provider_config.api_key
+        original_api_key = provider_config.api_key.get_secret_value()
         original_model = completion_params.model
         original_mode = instructor_config.mode
 
@@ -175,7 +175,7 @@ class TestAdapterRegistry:
             instructor_config=instructor_config,
         )
 
-        assert provider_config.api_key == original_api_key
+        assert provider_config.api_key.get_secret_value() == original_api_key
         assert completion_params.model == original_model
         assert instructor_config.mode == original_mode
 
@@ -195,7 +195,7 @@ class TestAdapterRegistry:
         )
 
         assert isinstance(adapter, OpenAIAdapter)
-        assert adapter.provider_config.api_key == "test_key"
+        assert adapter.provider_config.api_key.get_secret_value() == "test_key"
         assert adapter.completion_params.model == "gpt-4"
         assert adapter.instructor_config.mode == instructor.Mode.TOOLS
 
@@ -323,8 +323,8 @@ class TestFactoryErrorHandling:
         assert adapter1.provider_config is not adapter2.provider_config
         assert adapter1.completion_params is not adapter2.completion_params
 
-        assert adapter1.provider_config.api_key == "test_key_1"
-        assert adapter2.provider_config.api_key == "test_key_2"
+        assert adapter1.provider_config.api_key.get_secret_value() == "test_key_1"
+        assert adapter2.provider_config.api_key.get_secret_value() == "test_key_2"
         assert adapter1.completion_params.model == "gpt-4"
         assert adapter2.completion_params.model == "gpt-3.5-turbo"
 

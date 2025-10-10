@@ -48,19 +48,19 @@ class TestProviderConfigs:
         config = OpenAIProviderConfig(api_key="test_key")
 
         assert config.provider == Provider.OPENAI.value
-        assert config.api_key == "test_key"
+        assert config.api_key.get_secret_value() == "test_key"
 
     def test_anthropic_provider_config(self) -> None:
         config = AnthropicProviderConfig(api_key="test_key")
 
         assert config.provider == Provider.ANTHROPIC.value
-        assert config.api_key == "test_key"
+        assert config.api_key.get_secret_value() == "test_key"
 
     def test_gemini_provider_config(self) -> None:
         config = GeminiProviderConfig(api_key="test_key")
 
         assert config.provider == Provider.GEMINI.value
-        assert config.api_key == "test_key"
+        assert config.api_key.get_secret_value() == "test_key"
 
     def test_provider_config_extra_fields(self) -> None:
         config = OpenAIProviderConfig(
@@ -69,7 +69,7 @@ class TestProviderConfigs:
             base_url="https://custom.openai.com",  # type: ignore[call-arg]
         )
 
-        assert config.api_key == "test_key"
+        assert config.api_key.get_secret_value() == "test_key"
         data = config.model_dump()
         assert data["organization"] == "test_org"
         assert data["base_url"] == "https://custom.openai.com"
@@ -189,19 +189,19 @@ class TestDiscriminatedUnions:
         parsed_openai = provider_adapter.validate_python(openai_data)
         assert isinstance(parsed_openai, OpenAIProviderConfig)
         assert parsed_openai.provider == "openai"
-        assert parsed_openai.api_key == "test-key"
+        assert parsed_openai.api_key.get_secret_value() == "test-key"
 
         anthropic_data = {"provider": "anthropic", "api_key": "test-key"}
         parsed_anthropic = provider_adapter.validate_python(anthropic_data)
         assert isinstance(parsed_anthropic, AnthropicProviderConfig)
         assert parsed_anthropic.provider == "anthropic"
-        assert parsed_anthropic.api_key == "test-key"
+        assert parsed_anthropic.api_key.get_secret_value() == "test-key"
 
         gemini_data = {"provider": "gemini", "api_key": "test-key"}
         parsed_gemini = provider_adapter.validate_python(gemini_data)
         assert isinstance(parsed_gemini, GeminiProviderConfig)
         assert parsed_gemini.provider == "gemini"
-        assert parsed_gemini.api_key == "test-key"
+        assert parsed_gemini.api_key.get_secret_value() == "test-key"
 
     def test_completion_params_discriminated_union_parsing(self) -> None:
         from pydantic import TypeAdapter
@@ -321,7 +321,7 @@ class TestConfigSerialization:
 
         restored = OpenAIProviderConfig(**data)
 
-        assert restored.api_key == original.api_key
+        assert restored.api_key.get_secret_value() == original.api_key.get_secret_value()
         assert restored.model_dump() == original.model_dump()
 
     def test_client_params_round_trip(self) -> None:
@@ -356,7 +356,7 @@ class TestConfigSerialization:
 class TestConfigValidation:
     def test_empty_api_key_validation(self) -> None:
         config = OpenAIProviderConfig(api_key="")
-        assert config.api_key == ""
+        assert config.api_key.get_secret_value() == ""
 
     def test_empty_model_validation(self) -> None:
         params = OpenAICompletionClientParams(model="")
@@ -371,5 +371,9 @@ class TestConfigValidation:
 
         updated_config = config.model_copy(update={"api_key": "new_key"})
 
-        assert config.api_key == "test_key"
-        assert updated_config.api_key == "new_key"
+        assert config.api_key.get_secret_value() == "test_key"
+        assert (
+            updated_config.api_key.get_secret_value()
+            if hasattr(updated_config.api_key, "get_secret_value")
+            else updated_config.api_key
+        ) == "new_key"

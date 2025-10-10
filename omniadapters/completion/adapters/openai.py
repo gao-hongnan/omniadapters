@@ -25,8 +25,7 @@ class OpenAIAdapter(
         return Mode.TOOLS
 
     def _create_client(self) -> AsyncOpenAI:
-        config_dict = self.provider_config.model_dump()
-        return AsyncOpenAI(**config_dict)
+        return AsyncOpenAI(**self.provider_config.get_client_kwargs())
 
     @overload
     async def _agenerate(

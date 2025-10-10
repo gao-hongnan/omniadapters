@@ -49,8 +49,6 @@ from omniadapters.completion.factory import create_adapter
 from omniadapters.core.models import (
     AnthropicCompletionClientParams,
     AnthropicProviderConfig,
-    AzureOpenAICompletionClientParams,
-    AzureOpenAIProviderConfig,
     CompletionResponse,
     GeminiCompletionClientParams,
     GeminiProviderConfig,
@@ -80,20 +78,8 @@ class GeminiCompletion(GeminiCompletionClientParams):
     max_output_tokens: int = Field(default=1000)
 
 
-class AzureOpenAIProvider(AzureOpenAIProviderConfig):
-    api_key: str
-    azure_endpoint: str
-    api_version: str = Field(default="2024-02-01")
-
-
-class AzureOpenAICompletion(AzureOpenAICompletionClientParams):
-    model: str = Field(default="gpt-4o-mini")
-    temperature: float = Field(default=0.7)
-    max_completion_tokens: int = Field(default=1000)
-
-
-P = TypeVar("P", OpenAIProviderConfig, AnthropicProviderConfig, GeminiProviderConfig, AzureOpenAIProvider)
-C = TypeVar("C", OpenAICompletion, AnthropicCompletion, GeminiCompletion, AzureOpenAICompletion)
+P = TypeVar("P", OpenAIProviderConfig, AnthropicProviderConfig, GeminiProviderConfig)
+C = TypeVar("C", OpenAICompletion, AnthropicCompletion, GeminiCompletion)
 
 
 class ProviderFamily(BaseModel, Generic[P, C]):
@@ -107,11 +93,10 @@ class ModelFamily(BaseModel):
     openai: ProviderFamily[OpenAIProviderConfig, OpenAICompletion]
     anthropic: ProviderFamily[AnthropicProviderConfig, AnthropicCompletion]
     gemini: ProviderFamily[GeminiProviderConfig, GeminiCompletion]
-    azure_openai: ProviderFamily[AzureOpenAIProvider, AzureOpenAICompletion]
 
     def create_adapter(
-        self, provider: Literal["openai", "anthropic", "gemini", "azure-openai"]
-    ) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter | AzureOpenAIAdapter:
+        self, provider: Literal["openai", "anthropic", "gemini"]
+    ) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
         """Create adapter for specified provider"""
         match provider:
             case "openai":
@@ -122,10 +107,6 @@ class ModelFamily(BaseModel):
                 )
             case "gemini":
                 return create_adapter(provider_config=self.gemini.provider, completion_params=self.gemini.completion)
-            case "azure-openai":
-                return create_adapter(
-                    provider_config=self.azure_openai.provider, completion_params=self.azure_openai.completion
-                )
             case _:
                 assert_never(provider)
 
@@ -264,7 +245,7 @@ async def generate_completion_streaming(
 
 
 def create_demo_adapter(
-    provider: Literal["openai", "anthropic", "gemini", "azure-openai"],
+    provider: Literal["openai", "anthropic", "gemini"],
 ) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter | AzureOpenAIAdapter:
     """Create an adapter for the specified provider."""
     return settings.models.create_adapter(provider)
@@ -274,7 +255,7 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="Multi-provider LLM completion demo")
     parser.add_argument(
         "--provider",
-        choices=["openai", "anthropic", "gemini", "azure-openai", "all"],
+        choices=["openai", "anthropic", "gemini", "all"],
         default="all",
         help="LLM provider to use (default: all)",
     )
@@ -301,10 +282,8 @@ async def main() -> None:
 
     console.print(f"\n📝 [yellow]Prompt:[/yellow] {args.prompt}\n")
 
-    providers: list[Literal["openai", "anthropic", "gemini", "azure-openai"]] = (
-        ["openai", "anthropic", "gemini", "azure-openai"]
-        if args.provider == "all"
-        else [args.provider.replace("-", " ").lower()]
+    providers: list[Literal["openai", "anthropic", "gemini"]] = (
+        ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider.replace("-", " ").lower()]
     )
 
     for i, provider in enumerate(providers):

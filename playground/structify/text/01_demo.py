@@ -2,7 +2,7 @@
 # dependencies = [
 #   "openai==1.105.0",
 #   "anthropic==0.66.0",
-#   "google-genai==1.33.0",
+#   "google-genai==1.39.1",
 #   "instructor==1.10.0",
 #   "jsonref==1.1.0",
 #   "pydantic==2.11.7",

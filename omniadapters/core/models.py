@@ -13,7 +13,7 @@ class Allowable(BaseModel):
 
 
 class BaseProviderConfig(Allowable):
-    api_key: SecretStr
+    api_key: SecretStr  # NOTE: All 3 big providers names this `api_key` - do a drift check if really need rename this or remove this field.
 
     def get_client_kwargs(self) -> dict[str, Any]:
         data = self.model_dump()

@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 
 
 class ModelPricing(BaseModel):
-    input_cost_per_million: Decimal = Field(ge=Decimal("0"))
-    output_cost_per_million: Decimal = Field(ge=Decimal("0"))
+    input_cost_per_million: Decimal = Field(ge=Decimal(0))
+    output_cost_per_million: Decimal = Field(ge=Decimal(0))
     provider: Provider
 
     model_config = ConfigDict(frozen=True)
@@ -42,7 +42,7 @@ class CostResult(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-MILLION = Decimal("1_000_000")
+MILLION = Decimal(1_000_000)
 
 MODEL_PRICING_REGISTRY: dict[Model, ModelPricing] = {
     Model.GPT_4O: ModelPricing(
@@ -222,11 +222,11 @@ class CostTracker:
 
     @property
     def total_input_cost(self) -> Decimal:
-        return sum((r.cost.input_cost for r in self._results), Decimal("0"))
+        return sum((r.cost.input_cost for r in self._results), Decimal(0))
 
     @property
     def total_output_cost(self) -> Decimal:
-        return sum((r.cost.output_cost for r in self._results), Decimal("0"))
+        return sum((r.cost.output_cost for r in self._results), Decimal(0))
 
     @property
     def total_cost(self) -> Decimal:

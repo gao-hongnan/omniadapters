@@ -311,10 +311,10 @@ class TestTypeCompatibility:
         assert capability not in ["generation", "translation"]
 
     def test_type_var_generic_compatibility(self) -> None:
-        from typing import Generic, List
+        from typing import Generic
 
         class GenericContainer(Generic[StructuredResponseT]):
-            def __init__(self, items: List[StructuredResponseT]) -> None:
+            def __init__(self, items: list[StructuredResponseT]) -> None:
                 self.items = items
 
             def get_first(self) -> StructuredResponseT | None:

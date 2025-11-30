@@ -1,25 +1,27 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, AsyncIterator, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 import instructor
+
+_GEMINI_IMPORT_ERROR = "Gemini provider requires 'google-genai' package. Install with: uv add omniadapters[gemini]"
 
 try:
     from google import genai
     from google.genai.types import GenerateContentConfig, GenerateContentResponse
 except ImportError as e:
-    raise ImportError(
-        "Gemini provider requires 'google-genai' package. Install with: uv add omniadapters[gemini]"
-    ) from e
+    raise ImportError(_GEMINI_IMPORT_ERROR) from e
 
 from omniadapters.core.models import GeminiProviderConfig
-from omniadapters.core.types import StructuredResponseT
 from omniadapters.structify.adapters.base import BaseAdapter
 from omniadapters.structify.hooks import CompletionTrace, ahook_instructor
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from openai.types.chat import ChatCompletionMessageParam
 
+    from omniadapters.core.types import StructuredResponseT
     from omniadapters.structify.models import CompletionResult
 
 

@@ -75,6 +75,4 @@ dmypy.json
 cython_debug/
 .vscode/
 .env
-**/genai/**/*
-**/llm/**/*
 outputs/

@@ -2,10 +2,7 @@ from __future__ import annotations
 
 import threading
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, AsyncIterator, Generic, Literal, overload
-
-from instructor import AsyncInstructor
-from openai.types.chat import ChatCompletionMessageParam
+from typing import TYPE_CHECKING, Any, Generic, Literal, overload
 
 from omniadapters.core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
 from omniadapters.core.types import ClientResponseT, ClientT, ProviderConfigT, StructuredResponseT
@@ -13,9 +10,14 @@ from omniadapters.structify.hooks import ahook_instructor
 from omniadapters.structify.models import CompletionResult
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from instructor import AsyncInstructor
+    from openai.types.chat import ChatCompletionMessageParam
+
     from omniadapters.core.models import CompletionClientParams
     from omniadapters.structify.hooks import CompletionTrace
-    from omniadapters.structify.models import CompletionResult, InstructorConfig
+    from omniadapters.structify.models import InstructorConfig
 
 
 class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientResponseT]):
@@ -83,8 +85,10 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientResponseT]):
         with_hooks: bool = False,
         **kwargs: Any,
     ) -> StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]:
-        """Worth noting we follow instructor's pattern whereby all messages are a list of OpenAI's ChatCompletionMessageParam,
-        in which they will convert and unify to the provider's client message type."""
+        """Follow instructor's pattern where all messages are a list of ChatCompletionMessageParam.
+
+        These will be converted and unified to the provider's client message type.
+        """
         captured: CompletionTrace[ClientResponseT]
         # NOTE: Merge completion params with kwargs, letting kwargs override
         completion_kwargs = {**self.completion_params.model_dump(exclude_none=True), **kwargs}

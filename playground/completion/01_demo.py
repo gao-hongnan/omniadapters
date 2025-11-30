@@ -1,5 +1,4 @@
-"""
-Completion Adapter Pattern Demo - Multi-Provider LLM Completions
+"""Completion Adapter Pattern Demo - Multi-Provider LLM Completions
 
 ```bash
 uv run playground/completion/01_demo.py --provider all

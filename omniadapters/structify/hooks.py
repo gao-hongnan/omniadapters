@@ -3,12 +3,13 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any, Generic, Protocol
 
-import instructor
 from instructor.core.hooks import HookName
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+    import instructor
 
 from omniadapters.core.types import ClientResponseT, MessageParam
 
@@ -78,8 +79,7 @@ async def ahook_instructor(
     client: instructor.AsyncInstructor,
     enable: bool = True,
 ) -> AsyncIterator[CompletionTrace[ClientResponseT]]:
-    """
-    Capture execution details from an asynchronous instructor client.
+    """Capture execution details from an asynchronous instructor client.
 
     Use this async context manager when working with asynchronous instructor
     clients (instructor.AsyncInstructor) in async/await code. This is necessary
@@ -140,6 +140,7 @@ async def ahook_instructor(
     The async version is required when using AsyncInstructor to properly
     handle the asynchronous event loop and ensure callbacks are registered
     and unregistered correctly in an async context.
+
     """
     if not enable:
         captured: CompletionTrace[ClientResponseT] = CompletionTrace()
@@ -155,10 +156,10 @@ async def ahook_instructor(
             client.off(hook_name, handler)
 
 
-# NOTE: Import response types for model rebuild - these are needed at runtime when CompletionTrace.model_rebuild() is called!
-from anthropic.types import Message  # noqa: E402, F401 # type: ignore
-from google.genai.types import GenerateContentResponse  # noqa: E402, F401 # type: ignore
-from openai.types.chat import ChatCompletion  # noqa: E402, F401 # type: ignore
+# NOTE: Import response types for model rebuild - needed at runtime for CompletionTrace.model_rebuild()
+from anthropic.types import Message  # noqa: F401 # type: ignore[import-untyped]
+from google.genai.types import GenerateContentResponse  # noqa: F401 # type: ignore[import-untyped]
+from openai.types.chat import ChatCompletion  # noqa: F401 # type: ignore[import-untyped]
 
 # NOTE: Rebuild the model to resolve forward references
 CompletionTrace.model_rebuild()

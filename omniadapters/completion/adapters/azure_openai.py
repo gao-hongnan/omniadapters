@@ -1,20 +1,26 @@
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
+
+_AZURE_OPENAI_IMPORT_ERROR = (
+    "Azure OpenAI provider requires 'openai' package. Install with: uv add omniadapters[openai]"
+)
 
 try:
     from openai import AsyncAzureOpenAI
     from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam
 except ImportError as e:
-    raise ImportError(
-        "Azure OpenAI provider requires 'openai' package. Install with: uv add omniadapters[openai]"
-    ) from e
+    raise ImportError(_AZURE_OPENAI_IMPORT_ERROR) from e
 
 from omniadapters.completion.adapters.base import BaseAdapter
 from omniadapters.core.models import AzureOpenAIProviderConfig, CompletionResponse, CompletionUsage, StreamChunk
-from omniadapters.core.types import MessageParam
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from omniadapters.core.types import MessageParam
 
 
 class AzureOpenAIAdapter(
@@ -60,13 +66,12 @@ class AzureOpenAIAdapter(
     ) -> ChatCompletion | AsyncIterator[ChatCompletionChunk]:
         formatted_params = self._thanks_instructor(messages, **kwargs)
 
-        response = await self.client.chat.completions.create(
+        return await self.client.chat.completions.create(
             # messages=formatted_messages,
             # model=self.completion_params.model,
             stream=stream,
             **formatted_params,
         )
-        return response
 
     def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
         choice = response.choices[0] if response.choices else None

@@ -7,10 +7,10 @@ from .components import (
 from .cove import CoVeCandidate, CoVeOrchestrator
 
 __all__ = [
+    "CoVeCandidate",
+    "CoVeOrchestrator",
     "DraftResponse",
     "FactCheckAnswer",
     "JudgeVerdict",
     "SkepticQuestions",
-    "CoVeOrchestrator",
-    "CoVeCandidate",
 ]

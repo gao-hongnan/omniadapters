@@ -1,18 +1,17 @@
 # /// script
 # dependencies = [
-#   "openai==1.105.0",
-#   "anthropic==0.66.0",
-#   "google-genai==1.39.1",
-#   "instructor==1.10.0",
+#   "openai==2.8.0",
+#   "anthropic==0.72.0",
+#   "google-genai==1.42.0",
+#   "instructor==1.13.0",
 #   "jsonref==1.1.0",
-#   "pydantic==2.11.7",
-#   "pydantic-settings==2.10.1",
-#   "rich==14.1.0",
+#   "pydantic==2.12.0",
+#   "pydantic-settings==2.11.0",
+#   "rich==14.2.0",
 # ]
 # ///
 
-"""
-Structify Adapter Pattern Demo - Movie Review CLI
+"""Structify Adapter Pattern Demo - Movie Review CLI
 
 ```bash
 uv run playground/structify/text/01_demo.py --provider all
@@ -43,7 +42,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import time
-from typing import Any, Literal
+from typing import Any, Literal, Union
 
 from openai.types.chat import (
     ChatCompletionMessageParam,
@@ -69,12 +68,16 @@ from playground.structify.text.settings import create_demo_adapter
 console = Console()
 
 
+# NOTE
+# - instructor.Partial[MovieReview] introspects the model and tries to wrap union types
+# - Python 3.10+ str | None creates types.UnionType at runtime
+# - The instructor library's _wrap_models function tries to subscript this, which fails
 class MovieReview(BaseModel):
-    title: str
-    rating: float = Field(ge=0, le=10)
-    summary: str
-    pros: list[str]
-    cons: list[str]
+    title: Union[str, None] = None  # noqa: UP007
+    rating: Union[float, None] = Field(default=None, ge=0, le=10)  # noqa: UP007
+    summary: Union[str, None] = None  # noqa: UP007
+    pros: list[str] = Field(default_factory=list)
+    cons: list[str] = Field(default_factory=list)
 
 
 def create_review_table(review: MovieReview, provider_name: str) -> Table:
@@ -255,13 +258,12 @@ async def areview_movies_concurrent(
                         )
                         progress.update(tid, description=f"✓ '{movie_title}' complete")
                         return result.data
-                    else:
-                        review = await adapter.acreate(
-                            messages=msgs,
-                            response_model=MovieReview,
-                        )
-                        progress.update(tid, description=f"✓ '{movie_title}' complete")
-                        return review
+                    review = await adapter.acreate(
+                        messages=msgs,
+                        response_model=MovieReview,
+                    )
+                    progress.update(tid, description=f"✓ '{movie_title}' complete")
+                    return review
                 except Exception as e:
                     progress.update(tid, description=f"✗ '{movie_title}' failed: {e}")
                     raise
@@ -285,10 +287,11 @@ async def areview_movies_concurrent(
     table.add_column("Summary", style="white", width=50)
 
     for review in reviews:
+        summary = review.summary or ""
         table.add_row(
             review.title,
             f"⭐ {review.rating}/10",
-            review.summary[:100] + "..." if len(review.summary) > 100 else review.summary,
+            summary[:100] + "..." if len(summary) > 100 else summary,
         )
 
     console.print(table)
@@ -355,10 +358,11 @@ async def areview_movies_concurrent_streaming(
     table.add_column("Summary", style="white", width=50)
 
     for review in reviews:
+        summary = review.summary or ""
         table.add_row(
             review.title,
             f"⭐ {review.rating}/10",
-            review.summary[:100] + "..." if len(review.summary) > 100 else review.summary,
+            summary[:100] + "..." if len(summary) > 100 else summary,
         )
 
     console.print(table)

@@ -1,23 +1,29 @@
-"""Documentation: https://docs.claude.com/en/api/messages"""
+"""Documentation: https://docs.claude.com/en/api/messages."""
 
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
+
+_ANTHROPIC_IMPORT_ERROR = (
+    "Anthropic provider requires 'anthropic' package. Install with: uv add omniadapters[anthropic]"
+)
 
 try:
     from anthropic import AsyncAnthropic
     from anthropic.types import Message, RawMessageStreamEvent
     from anthropic.types import MessageParam as AnthropicMessageParam
 except ImportError as e:
-    raise ImportError(
-        "Anthropic provider requires 'anthropic' package. Install with: uv add omniadapters[anthropic]"
-    ) from e
+    raise ImportError(_ANTHROPIC_IMPORT_ERROR) from e
 
 from omniadapters.completion.adapters.base import BaseAdapter
 from omniadapters.core.models import AnthropicProviderConfig, CompletionResponse, CompletionUsage, StreamChunk
-from omniadapters.core.types import MessageParam
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from omniadapters.core.types import MessageParam
 
 
 class AnthropicAdapter(
@@ -63,15 +69,13 @@ class AnthropicAdapter(
     ) -> Message | AsyncIterator[RawMessageStreamEvent]:
         formatted_params = self._thanks_instructor(messages, **kwargs)
         # NOTE: least overload needed requires model and max_tokens!
-        response = await self.client.messages.create(
+        return await self.client.messages.create(
             # messages=formatted_messages,
             # model=self.completion_params.model,
             # max_tokens=kwargs.pop("max_tokens", 1024),  # NOTE: anthropic requires `max_tokens` to be specified
             stream=stream,
             **formatted_params,
         )
-
-        return response
 
     def _to_unified_response(self, response: Message) -> CompletionResponse[Message]:
         content = ""

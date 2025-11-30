@@ -29,58 +29,28 @@ output-format = "grouped"
 
 [lint]
 exclude = ["*.ipynb"]
-select = [
-    "ARG",
-    "B",
-    "C4",
-    "G",
-    "E",
-    "EXE",
-    "F",
-    "I",
-    "SIM1",
-    "W",
-    "NPY",
-    "PERF",
-    "PGH004",
-    "PIE794",
-    "PIE800",
-    "PIE804",
-    "PIE807",
-    "PIE810",
-    "PLC0131",
-    "PLC0132",
-    "PLC0205",
-    "PLE",
-    "PLR0133",
-    "PLR0206",
-    "PLR1722",
-    "PLW0129",
-    "PLW0406",
-    "PLW0711",
-    "PLW1509",
-    "PLW3301",
-    "PT006",
-    "PT022",
-    "PT023",
-    "PT024",
-    "PT025",
-    "PT026",
-    "PYI",
-    "B904",
-    "TRY203",
-    "UP",
-]
+select = ["ALL"]
 ignore = [
-    "E501",
-    "UP006",
-    "UP015",
-    "UP035",
-    "G004",
-    "UP007",
-    "UP040",
-    "UP046",
-    "UP047",
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package
+    "D105", # Missing docstring in magic method
+    "D107", # Missing docstring in `__init__`
+    "D203", # Incompatible with D211 (no-blank-line-before-class)
+    "D213", # Incompatible with D212 (multi-line-summary-first-line)
+    "COM812", # Conflicts with formatter
+    "PLC0415", # `import` should be at the top-level of a file
+    "S101", # Use of `assert` detected
+    "ERA001", # Commented out code
+    "UP046", # non-PEP695-generic-class
+    "ANN401", # Dynamically typed expressions (typing.Any) in **kwargs is idiomatic
+    "FBT001", # Boolean-typed positional argument in function definition
+    "FBT002", # Boolean default positional argument in function definition
+    "FBT003", # Boolean positional value in function call
+    "C901", # Function too complex
+    "E402", # Module level import not at top of file (intentional for optional deps)
 ]
 fixable = ["ALL"]
 unfixable = []

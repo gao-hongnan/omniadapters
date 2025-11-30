@@ -1,18 +1,17 @@
 # /// script
 # dependencies = [
-#   "openai==1.105.0",
-#   "anthropic==0.66.0",
-#   "google-genai==1.33.0",
-#   "instructor==1.10.0",
+#   "openai==2.8.0",
+#   "anthropic==0.72.0",
+#   "google-genai==1.42.0",
+#   "instructor==1.13.0",
 #   "jsonref==1.1.0",
-#   "pydantic==2.11.7",
-#   "pydantic-settings==2.10.1",
-#   "rich==14.1.0",
+#   "pydantic==2.12.0",
+#   "pydantic-settings==2.11.0",
+#   "rich==14.2.0",
 # ]
 # ///
 
-"""
-```bash
+"""```bash
 uv run playground/structify/text/02_conversation.py --stream --provider openai
 ```
 """
@@ -242,7 +241,7 @@ async def tech_support_conversation(provider: str, stream_mode: bool = False) ->
         )
     )
 
-    provider_literal = cast(Literal["openai", "anthropic", "gemini"], provider)
+    provider_literal = cast("Literal['openai', 'anthropic', 'gemini']", provider)
     adapter = create_demo_adapter(provider_literal)
     try:
         conversation_history: list[ChatCompletionMessageParam] = [

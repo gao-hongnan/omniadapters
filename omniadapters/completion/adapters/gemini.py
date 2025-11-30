@@ -1,10 +1,12 @@
-"""Documentation: https://ai.google.dev/gemini-api/docs/text-generation"""
+"""Documentation: https://ai.google.dev/gemini-api/docs/text-generation."""
 
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
+
+_GEMINI_IMPORT_ERROR = "Gemini provider requires 'google-genai' package. Install with: uv add omniadapters[gemini]"
 
 try:
     from google import genai
@@ -16,13 +18,15 @@ try:
         update_genai_kwargs,
     )
 except ImportError as e:
-    raise ImportError(
-        "Gemini provider requires 'google-genai' package. Install with: uv add omniadapters[gemini]"
-    ) from e
+    raise ImportError(_GEMINI_IMPORT_ERROR) from e
 
 from omniadapters.completion.adapters.base import BaseAdapter
 from omniadapters.core.models import CompletionResponse, CompletionUsage, GeminiProviderConfig, StreamChunk
-from omniadapters.core.types import MessageParam
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from omniadapters.core.types import MessageParam
 
 
 class GeminiAdapter(
@@ -42,8 +46,7 @@ class GeminiAdapter(
         return genai.Client(**self.provider_config.get_client_kwargs())
 
     def _thanks_instructor(self, messages: list[MessageParam], **kwargs: Any) -> dict[str, Any]:
-        """Override cause `handle_genai_structured_outputs` is called when `response_model` is not `None` but we are using `None`."""
-
+        """Override because `handle_genai_structured_outputs` is called when response_model is not None."""
         if self.instructor_mode in {Mode.GENAI_STRUCTURED_OUTPUTS, Mode.GENAI_TOOLS}:
             new_kwargs = kwargs.copy()
             new_kwargs["messages"] = messages
@@ -121,14 +124,12 @@ class GeminiAdapter(
                 # config=cast(GenerateContentConfigDict, kwargs) if kwargs else None,
                 **formatted_params,
             )
-        else:
-            response = await self.client.aio.models.generate_content(
-                # model=model,
-                # contents=formatted_messages,
-                # config=cast(GenerateContentConfigDict, kwargs) if kwargs else None,
-                **formatted_params,
-            )
-            return response
+        return await self.client.aio.models.generate_content(
+            # model=model,
+            # contents=formatted_messages,
+            # config=cast(GenerateContentConfigDict, kwargs) if kwargs else None,
+            **formatted_params,
+        )
 
     def _to_unified_response(self, response: GenerateContentResponse) -> CompletionResponse[GenerateContentResponse]:
         content = ""

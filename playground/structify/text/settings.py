@@ -1,8 +1,8 @@
 # /// script
 # dependencies = [
-#   "instructor==1.10.0",
-#   "pydantic==2.11.7",
-#   "pydantic-settings==2.10.1",
+#   "instructor==1.13.0",
+#   "pydantic==2.12.0",
+#   "pydantic-settings==2.11.0",
 # ]
 # ///
 
@@ -62,7 +62,7 @@ class TextModelFamily(BaseModel):
             | ProviderFamily[GeminiProviderConfig, GeminiCompletion]
         ) = getattr(self, provider)
         return cast(
-            OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
+            "OpenAIAdapter | AnthropicAdapter | GeminiAdapter",
             create_adapter(
                 provider_config=family.provider,
                 completion_params=family.completion,

@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Generic
+from typing import TYPE_CHECKING, Generic
 
-import instructor
+import instructor  # noqa: TC002 - Pydantic needs runtime access to instructor.Mode
 from pydantic import BaseModel, ConfigDict
 
 from omniadapters.core.models import Allowable
 from omniadapters.core.types import ClientResponseT, StructuredResponseT
-from omniadapters.structify.hooks import CompletionTrace
+
+if TYPE_CHECKING:
+    from omniadapters.structify.hooks import CompletionTrace
 
 
 class InstructorConfig(Allowable):

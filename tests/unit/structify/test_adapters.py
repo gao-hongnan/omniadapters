@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, AsyncIterator, cast
+from collections.abc import AsyncIterator
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import instructor
@@ -162,7 +163,7 @@ class TestOpenAIAdapter:
         mock_result = SampleModel(name="test", value=42)
         mock_instructor.create.return_value = mock_result
 
-        messages = cast(list[ChatCompletionMessageParam], [{"role": "user", "content": "test"}])
+        messages = cast("list[ChatCompletionMessageParam]", [{"role": "user", "content": "test"}])
 
         with (
             patch.object(adapter, "_instructor", mock_instructor),
@@ -197,7 +198,7 @@ class TestOpenAIAdapter:
         mock_result = SampleModel(name="test", value=42)
         mock_instructor.create.return_value = mock_result
 
-        messages = cast(list[ChatCompletionMessageParam], [{"role": "user", "content": "test"}])
+        messages = cast("list[ChatCompletionMessageParam]", [{"role": "user", "content": "test"}])
 
         with (
             patch.object(adapter, "_instructor", mock_instructor),
@@ -244,7 +245,7 @@ class TestOpenAIAdapter:
 
         mock_instructor.create_partial = mock_create_partial
 
-        messages = cast(list[ChatCompletionMessageParam], [{"role": "user", "content": "test"}])
+        messages = cast("list[ChatCompletionMessageParam]", [{"role": "user", "content": "test"}])
 
         with patch.object(adapter, "_instructor", mock_instructor):
             results = [
@@ -378,7 +379,7 @@ class TestGeminiAdapter:
         mock_result = SampleModel(name="test", value=42)
         mock_instructor.create.return_value = mock_result
 
-        messages = cast(list[ChatCompletionMessageParam], [{"role": "user", "content": "test"}])
+        messages = cast("list[ChatCompletionMessageParam]", [{"role": "user", "content": "test"}])
 
         with (
             patch.object(adapter, "_instructor", mock_instructor),
@@ -422,7 +423,7 @@ class TestAdapterErrorHandling:
         mock_instructor = AsyncMock()
         mock_instructor.create.side_effect = Exception("API Error")
 
-        messages = cast(list[ChatCompletionMessageParam], [{"role": "user", "content": "test"}])
+        messages = cast("list[ChatCompletionMessageParam]", [{"role": "user", "content": "test"}])
 
         with patch.object(adapter, "_instructor", mock_instructor), pytest.raises(Exception, match="API Error"):
             await adapter.acreate(

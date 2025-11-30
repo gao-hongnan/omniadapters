@@ -39,7 +39,7 @@ class TestCompletionTrace:
 
     def test_completion_trace_with_data(self) -> None:
         kwargs = {"model": "gpt-4", "temperature": 0.7}
-        messages = cast(list[MessageParam], [{"role": "user", "content": "test"}])
+        messages = cast("list[MessageParam]", [{"role": "user", "content": "test"}])
         parsed = SampleModel(name="test", value=42)
         error = Exception("test error")
 

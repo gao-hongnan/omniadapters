@@ -387,7 +387,7 @@ class TestFactoryTypeAnnotations:
 
         with pytest.raises(AssertionError) as exc_info:
             create_adapter(
-                provider_config=cast(OpenAIProviderConfig, invalid_config),
+                provider_config=cast("OpenAIProviderConfig", invalid_config),
                 completion_params=completion_params,
                 instructor_config=instructor_config,
             )
@@ -413,7 +413,7 @@ class TestFactoryTypeAnnotations:
 
         with pytest.raises(AssertionError):
             create_adapter(
-                provider_config=cast(GeminiProviderConfig, invalid_config),
+                provider_config=cast("GeminiProviderConfig", invalid_config),
                 completion_params=completion_params,
                 instructor_config=instructor_config,
             )

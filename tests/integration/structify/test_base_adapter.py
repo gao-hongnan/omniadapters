@@ -12,7 +12,8 @@ from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, ValidationError
 
 from omniadapters.structify.adapters.base import BaseAdapter
-from omniadapters.structify.models import CompletionResult, CompletionTrace
+from omniadapters.structify.hooks import CompletionTrace
+from omniadapters.structify.models import CompletionResult
 from tests.conftest import ComplexTestModel, SimpleTestModel
 
 TAdapter = TypeVar("TAdapter", bound=BaseAdapter[Any, Any, Any])

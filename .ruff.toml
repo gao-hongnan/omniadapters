@@ -51,6 +51,9 @@ ignore = [
     "FBT003", # Boolean positional value in function call
     "C901", # Function too complex
     "E402", # Module level import not at top of file (intentional for optional deps)
+    "TD002", # Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
+    "TD003", # Missing issue link for this TODO
+    "FIX002", # Line contains TODO, consider resolving the issue
 ]
 fixable = ["ALL"]
 unfixable = []

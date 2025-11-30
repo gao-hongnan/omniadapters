@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import instructor
-from openai import AsyncAzureOpenAI
-from openai.types.chat import ChatCompletion
+
+try:
+    from openai import AsyncAzureOpenAI
+    from openai.types.chat import ChatCompletion
+except ImportError as e:
+    raise ImportError(
+        "Azure OpenAI provider requires 'openai' package. Install with: uv add omniadapters[openai]"
+    ) from e
 
 from omniadapters.core.models import AzureOpenAIProviderConfig
 from omniadapters.structify.adapters.base import BaseAdapter

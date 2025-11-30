@@ -3,8 +3,12 @@ from __future__ import annotations
 from typing import Any, AsyncIterator, Literal, overload
 
 from instructor import Mode
-from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam
+
+try:
+    from openai import AsyncOpenAI
+    from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam
+except ImportError as e:
+    raise ImportError("OpenAI provider requires 'openai' package. Install with: uv add omniadapters[openai]") from e
 
 from omniadapters.completion.adapters.base import BaseAdapter
 from omniadapters.core.models import CompletionResponse, CompletionUsage, OpenAIProviderConfig, StreamChunk

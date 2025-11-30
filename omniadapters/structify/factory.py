@@ -8,10 +8,6 @@ from omniadapters.core.models import (
     GeminiProviderConfig,
     OpenAIProviderConfig,
 )
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.azure_openai import AzureOpenAIAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
 
 if TYPE_CHECKING:
     from omniadapters.core.models import (
@@ -22,6 +18,10 @@ if TYPE_CHECKING:
         OpenAICompletionClientParams,
         ProviderConfig,
     )
+    from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+    from omniadapters.structify.adapters.azure_openai import AzureOpenAIAdapter
+    from omniadapters.structify.adapters.gemini import GeminiAdapter
+    from omniadapters.structify.adapters.openai import OpenAIAdapter
     from omniadapters.structify.models import InstructorConfig
 
 
@@ -78,24 +78,32 @@ def create_adapter(
 ) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter | AzureOpenAIAdapter:
     match provider_config:
         case OpenAIProviderConfig():
+            from omniadapters.structify.adapters.openai import OpenAIAdapter
+
             return OpenAIAdapter(
                 provider_config=provider_config,
                 completion_params=completion_params,
                 instructor_config=instructor_config,
             )
         case AnthropicProviderConfig():
+            from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+
             return AnthropicAdapter(
                 provider_config=provider_config,
                 completion_params=completion_params,
                 instructor_config=instructor_config,
             )
         case GeminiProviderConfig():
+            from omniadapters.structify.adapters.gemini import GeminiAdapter
+
             return GeminiAdapter(
                 provider_config=provider_config,
                 completion_params=completion_params,
                 instructor_config=instructor_config,
             )
         case AzureOpenAIProviderConfig():
+            from omniadapters.structify.adapters.azure_openai import AzureOpenAIAdapter
+
             return AzureOpenAIAdapter(
                 provider_config=provider_config,
                 completion_params=completion_params,

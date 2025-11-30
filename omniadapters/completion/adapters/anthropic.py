@@ -4,10 +4,16 @@ from __future__ import annotations
 
 from typing import Any, AsyncIterator, Literal, overload
 
-from anthropic import AsyncAnthropic
-from anthropic.types import Message, RawMessageStreamEvent
-from anthropic.types import MessageParam as AnthropicMessageParam
 from instructor import Mode
+
+try:
+    from anthropic import AsyncAnthropic
+    from anthropic.types import Message, RawMessageStreamEvent
+    from anthropic.types import MessageParam as AnthropicMessageParam
+except ImportError as e:
+    raise ImportError(
+        "Anthropic provider requires 'anthropic' package. Install with: uv add omniadapters[anthropic]"
+    ) from e
 
 from omniadapters.completion.adapters.base import BaseAdapter
 from omniadapters.core.models import AnthropicProviderConfig, CompletionResponse, CompletionUsage, StreamChunk

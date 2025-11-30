@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 import instructor
-from anthropic import AsyncAnthropic
-from anthropic.types import Message as AnthropicResponse
+
+try:
+    from anthropic import AsyncAnthropic
+    from anthropic.types import Message as AnthropicResponse
+except ImportError as e:
+    raise ImportError(
+        "Anthropic provider requires 'anthropic' package. Install with: uv add omniadapters[anthropic]"
+    ) from e
 
 from omniadapters.core.models import AnthropicProviderConfig
 from omniadapters.structify.adapters.base import BaseAdapter

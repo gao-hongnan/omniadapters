@@ -4,15 +4,21 @@ from __future__ import annotations
 
 from typing import Any, AsyncIterator, Literal, overload
 
-from google import genai
-from google.genai.types import ContentOrDict, GenerateContentConfig, GenerateContentResponse
 from instructor import Mode
-from instructor.processing.multimodal import extract_genai_multimodal_content
-from instructor.providers.gemini.utils import (
-    convert_to_genai_messages,
-    extract_genai_system_message,
-    update_genai_kwargs,
-)
+
+try:
+    from google import genai
+    from google.genai.types import ContentOrDict, GenerateContentConfig, GenerateContentResponse
+    from instructor.processing.multimodal import extract_genai_multimodal_content
+    from instructor.providers.gemini.utils import (
+        convert_to_genai_messages,
+        extract_genai_system_message,
+        update_genai_kwargs,
+    )
+except ImportError as e:
+    raise ImportError(
+        "Gemini provider requires 'google-genai' package. Install with: uv add omniadapters[gemini]"
+    ) from e
 
 from omniadapters.completion.adapters.base import BaseAdapter
 from omniadapters.core.models import CompletionResponse, CompletionUsage, GeminiProviderConfig, StreamChunk

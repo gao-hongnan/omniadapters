@@ -3,9 +3,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, AsyncIterator, Literal, overload
 
 import instructor
-from google import genai
-from google.genai.types import GenerateContentConfig, GenerateContentResponse
-from openai.types.chat import ChatCompletionMessageParam
+
+try:
+    from google import genai
+    from google.genai.types import GenerateContentConfig, GenerateContentResponse
+except ImportError as e:
+    raise ImportError(
+        "Gemini provider requires 'google-genai' package. Install with: uv add omniadapters[gemini]"
+    ) from e
 
 from omniadapters.core.models import GeminiProviderConfig
 from omniadapters.core.types import StructuredResponseT
@@ -13,6 +18,8 @@ from omniadapters.structify.adapters.base import BaseAdapter
 from omniadapters.structify.hooks import CompletionTrace, ahook_instructor
 
 if TYPE_CHECKING:
+    from openai.types.chat import ChatCompletionMessageParam
+
     from omniadapters.structify.models import CompletionResult
 
 

@@ -1,4 +1,4 @@
-"""Completion Adapter Pattern Demo - Multi-Provider LLM Completions
+"""Completion Adapter Pattern Demo - Multi-Provider LLM Completions.
 
 ```bash
 uv run playground/completion/01_demo.py --provider all
@@ -19,31 +19,23 @@ uv run playground/completion/01_demo.py --trace --provider all
 uv run playground/completion/01_demo.py --provider openai --trace
 uv run playground/completion/01_demo.py --provider openai --prompt "Hello world" --stream --trace
 ```
-"""
+"""  # noqa: N999
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-from pprint import pprint
-from typing import Generic, Literal, TypeVar, assert_never
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar, assert_never
 
-from anthropic.types import Message
-from google.genai.types import GenerateContentResponse
-from openai.types.chat import ChatCompletion
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from rich.console import Console
+from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.syntax import Syntax
 from rich.text import Text
 
-from omniadapters.completion.adapters.anthropic import AnthropicAdapter
-from omniadapters.completion.adapters.azure_openai import AzureOpenAIAdapter
-from omniadapters.completion.adapters.gemini import GeminiAdapter
-from omniadapters.completion.adapters.openai import OpenAIAdapter
 from omniadapters.completion.factory import create_adapter
 from omniadapters.core.models import (
     AnthropicCompletionClientParams,
@@ -54,7 +46,17 @@ from omniadapters.core.models import (
     OpenAICompletionClientParams,
     OpenAIProviderConfig,
 )
-from omniadapters.core.types import MessageParam
+
+if TYPE_CHECKING:
+    from anthropic.types import Message
+    from google.genai.types import GenerateContentResponse
+    from openai.types.chat import ChatCompletion
+
+    from omniadapters.completion.adapters.anthropic import AnthropicAdapter
+    from omniadapters.completion.adapters.azure_openai import AzureOpenAIAdapter
+    from omniadapters.completion.adapters.gemini import GeminiAdapter
+    from omniadapters.completion.adapters.openai import OpenAIAdapter
+    from omniadapters.core.types import MessageParam
 
 console = Console()
 
@@ -87,7 +89,7 @@ class ProviderFamily(BaseModel, Generic[P, C]):
 
 
 class ModelFamily(BaseModel):
-    """Container for all provider configurations"""
+    """Container for all provider configurations."""
 
     openai: ProviderFamily[OpenAIProviderConfig, OpenAICompletion]
     anthropic: ProviderFamily[AnthropicProviderConfig, AnthropicCompletion]
@@ -96,7 +98,7 @@ class ModelFamily(BaseModel):
     def create_adapter(
         self, provider: Literal["openai", "anthropic", "gemini"]
     ) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
-        """Create adapter for specified provider"""
+        """Create adapter for specified provider."""
         match provider:
             case "openai":
                 return create_adapter(provider_config=self.openai.provider, completion_params=self.openai.completion)
@@ -138,8 +140,8 @@ def create_response_panel(
         metadata.append(f"Model: {response.model}")
     if response.usage:
         metadata.append(
-            f"Tokens: {response.usage.prompt_tokens} prompt + "
-            f"{response.usage.completion_tokens} completion = "
+            f"Tokens: {response.usage.input_tokens} input + "
+            f"{response.usage.output_tokens} output = "
             f"{response.usage.total_tokens} total"
         )
 
@@ -180,10 +182,23 @@ def display_trace_info(
         word_wrap=True,
     )
 
+    renderables: list[Syntax | Text] = [json_display]
+
+    if response.usage:
+        usage_str = response.usage.model_dump_json(indent=2)
+        usage_display = Syntax(
+            code=usage_str,
+            lexer="json",
+            theme="monokai",
+            line_numbers=False,
+            word_wrap=True,
+        )
+        renderables.extend([Text("\n"), usage_display])
+
     console.print(
         Panel(
-            json_display,
-            title=f"📊 [bold cyan]Trace Information - {raw_type}[/bold cyan]",
+            Group(*renderables),
+            title=f"📊 [bold cyan]Trace Information - {raw_type} and Usage[/bold cyan]",
             border_style="cyan",
             padding=(1, 2),
             expand=False,
@@ -212,7 +227,6 @@ async def generate_completion(
     console.print(create_response_panel(response, provider_name))
 
     if show_trace:
-        pprint(type(response.raw_response))
         display_trace_info(response)
 
 
@@ -297,7 +311,7 @@ async def main() -> None:
                     )
             finally:
                 await adapter.aclose()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             console.print(f"[red]❌ Error with {provider}: {e}[/red]")
 
         if i < len(providers) - 1:

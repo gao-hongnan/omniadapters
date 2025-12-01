@@ -4,16 +4,39 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
 
-_OPENAI_IMPORT_ERROR = "OpenAI provider requires 'openai' package. Install with: uv add omniadapters[openai]"
+from omniadapters.core.constants import OPENAI_IMPORT_ERROR
 
 try:
     from openai import AsyncOpenAI
+    from openai.types import CompletionUsage as OpenAIUsage
     from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam
 except ImportError as e:
-    raise ImportError(_OPENAI_IMPORT_ERROR) from e
+    raise ImportError(OPENAI_IMPORT_ERROR) from e
 
 from omniadapters.completion.adapters.base import BaseAdapter
-from omniadapters.core.models import CompletionResponse, CompletionUsage, OpenAIProviderConfig, StreamChunk
+from omniadapters.core.models import CompletionResponse, OpenAIProviderConfig, StreamChunk, Usage
+from omniadapters.core.usage_converter import to_usage
+
+
+@to_usage.register(OpenAIUsage)
+def _(usage: OpenAIUsage) -> Usage:
+    cached_input_tokens = None
+    thinking_tokens = None
+
+    if usage.prompt_tokens_details:
+        cached_input_tokens = usage.prompt_tokens_details.cached_tokens
+
+    if usage.completion_tokens_details:
+        thinking_tokens = usage.completion_tokens_details.reasoning_tokens
+
+    return Usage(
+        input_tokens=usage.prompt_tokens,
+        output_tokens=usage.completion_tokens,
+        total_tokens=usage.total_tokens,
+        cached_input_tokens=cached_input_tokens,
+        thinking_tokens=thinking_tokens,
+    )
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -73,16 +96,11 @@ class OpenAIAdapter(
 
     def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
         choice = response.choices[0] if response.choices else None
+
         return CompletionResponse[ChatCompletion](
             content=choice.message.content or "" if choice else "",
             model=response.model,
-            usage=CompletionUsage(
-                prompt_tokens=response.usage.prompt_tokens,
-                completion_tokens=response.usage.completion_tokens,
-                total_tokens=response.usage.total_tokens,
-            )
-            if response.usage
-            else None,
+            usage=to_usage(response.usage) if response.usage else None,
             raw_response=response,
         )
 

@@ -6,19 +6,30 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
 
-_ANTHROPIC_IMPORT_ERROR = (
-    "Anthropic provider requires 'anthropic' package. Install with: uv add omniadapters[anthropic]"
-)
+from omniadapters.core.constants import ANTHROPIC_IMPORT_ERROR
 
 try:
     from anthropic import AsyncAnthropic
     from anthropic.types import Message, RawMessageStreamEvent
     from anthropic.types import MessageParam as AnthropicMessageParam
+    from anthropic.types import Usage as AnthropicUsage
 except ImportError as e:
-    raise ImportError(_ANTHROPIC_IMPORT_ERROR) from e
+    raise ImportError(ANTHROPIC_IMPORT_ERROR) from e
 
 from omniadapters.completion.adapters.base import BaseAdapter
-from omniadapters.core.models import AnthropicProviderConfig, CompletionResponse, CompletionUsage, StreamChunk
+from omniadapters.core.models import AnthropicProviderConfig, CompletionResponse, StreamChunk, Usage
+from omniadapters.core.usage_converter import to_usage
+
+
+@to_usage.register(AnthropicUsage)
+def _(usage: AnthropicUsage) -> Usage:
+    return Usage(
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        total_tokens=usage.input_tokens + usage.output_tokens,
+        cached_input_tokens=getattr(usage, "cache_read_input_tokens", None),
+    )
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -88,13 +99,7 @@ class AnthropicAdapter(
         return CompletionResponse[Message](
             content=content,
             model=response.model,
-            usage=CompletionUsage(
-                prompt_tokens=response.usage.input_tokens,
-                completion_tokens=response.usage.output_tokens,
-                total_tokens=response.usage.input_tokens + response.usage.output_tokens,
-            )
-            if response.usage
-            else None,
+            usage=to_usage(response.usage) if response.usage else None,
             raw_response=response,
         )
 

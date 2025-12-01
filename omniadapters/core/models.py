@@ -88,16 +88,21 @@ CompletionClientParams = Annotated[
 ]
 
 
-class CompletionUsage(BaseModel):
-    prompt_tokens: int
-    completion_tokens: int
+class Usage(BaseModel):
+    input_tokens: int
+    output_tokens: int
     total_tokens: int
+    cached_input_tokens: int | None = None
+    thinking_tokens: int | None = None
+    tool_use_tokens: int | None = None
+
+    model_config = ConfigDict(frozen=True)
 
 
 class CompletionResponse(BaseModel, Generic[ClientResponseT]):
     content: str
     model: str
-    usage: CompletionUsage | None = None
+    usage: Usage | None = None
     raw_response: ClientResponseT = Field(exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

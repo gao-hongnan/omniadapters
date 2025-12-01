@@ -58,7 +58,7 @@ def load_questions(file_path: str | Path) -> list[UserQuery]:
     if file_path.suffix != ".json":
         raise ValueError(f"Unsupported file format: {file_path.suffix}. Use JSON.")
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with Path.open(file_path, encoding="utf-8") as f:
         data = json.load(f)
         user_queries = [UserQuery(**item) for item in data]
 

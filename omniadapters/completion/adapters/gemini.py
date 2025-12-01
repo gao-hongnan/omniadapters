@@ -6,11 +6,12 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
 
-_GEMINI_IMPORT_ERROR = "Gemini provider requires 'google-genai' package. Install with: uv add omniadapters[gemini]"
+from omniadapters.core.constants import GEMINI_IMPORT_ERROR
 
 try:
     from google import genai
     from google.genai.types import ContentOrDict, GenerateContentConfig, GenerateContentResponse
+    from google.genai.types import GenerateContentResponseUsageMetadata as GeminiUsage
     from instructor.processing.multimodal import extract_genai_multimodal_content
     from instructor.providers.gemini.utils import (
         convert_to_genai_messages,
@@ -18,10 +19,24 @@ try:
         update_genai_kwargs,
     )
 except ImportError as e:
-    raise ImportError(_GEMINI_IMPORT_ERROR) from e
+    raise ImportError(GEMINI_IMPORT_ERROR) from e
 
 from omniadapters.completion.adapters.base import BaseAdapter
-from omniadapters.core.models import CompletionResponse, CompletionUsage, GeminiProviderConfig, StreamChunk
+from omniadapters.core.models import CompletionResponse, GeminiProviderConfig, StreamChunk, Usage
+from omniadapters.core.usage_converter import to_usage
+
+
+@to_usage.register(GeminiUsage)
+def _(usage: GeminiUsage) -> Usage:
+    return Usage(
+        input_tokens=usage.prompt_token_count or 0,
+        output_tokens=usage.candidates_token_count or 0,
+        total_tokens=usage.total_token_count or 0,
+        cached_input_tokens=usage.cached_content_token_count,
+        thinking_tokens=usage.thoughts_token_count,
+        tool_use_tokens=usage.tool_use_prompt_token_count,
+    )
+
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -140,18 +155,10 @@ class GeminiAdapter(
 
         model = response.model_version or str(self.completion_params.model)
 
-        usage = None
-        if response.usage_metadata:
-            usage = CompletionUsage(
-                prompt_tokens=response.usage_metadata.prompt_token_count or 0,
-                completion_tokens=response.usage_metadata.candidates_token_count or 0,
-                total_tokens=response.usage_metadata.total_token_count or 0,
-            )
-
         return CompletionResponse[GenerateContentResponse](
             content=content,
             model=model,
-            usage=usage,
+            usage=to_usage(response.usage_metadata) if response.usage_metadata else None,
             raw_response=response,
         )
 

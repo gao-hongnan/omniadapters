@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 from omniadapters.core.enums import Model, Provider
 
 if TYPE_CHECKING:
-    from omniadapters.core.models import CompletionUsage
+    from omniadapters.core.models import Usage
 
 
 class ModelPricing(BaseModel):
@@ -32,9 +32,9 @@ class UsageCost(BaseModel):
         return self.input_cost + self.output_cost
 
 
-class CostResult(BaseModel):
-    prompt_tokens: int
-    completion_tokens: int
+class UsageSnapshot(BaseModel):
+    input_tokens: int
+    output_tokens: int
     total_tokens: int
     cost: UsageCost
     model: Model | str
@@ -71,8 +71,8 @@ MODEL_PRICING_REGISTRY: dict[Model, ModelPricing] = {
         provider=Provider.ANTHROPIC,
     ),
     Model.CLAUDE_OPUS_4_5: ModelPricing(
-        input_cost_per_million=Decimal("15.00"),
-        output_cost_per_million=Decimal("75.00"),
+        input_cost_per_million=Decimal("5.00"),
+        output_cost_per_million=Decimal("25.00"),
         provider=Provider.ANTHROPIC,
     ),
     Model.CLAUDE_HAIKU_4_5: ModelPricing(
@@ -86,8 +86,8 @@ MODEL_PRICING_REGISTRY: dict[Model, ModelPricing] = {
         provider=Provider.GEMINI,
     ),
     Model.GEMINI_2_5_FLASH: ModelPricing(
-        input_cost_per_million=Decimal("0.15"),
-        output_cost_per_million=Decimal("0.60"),
+        input_cost_per_million=Decimal("0.30"),
+        output_cost_per_million=Decimal("2.50"),
         provider=Provider.GEMINI,
     ),
     Model.GEMINI_2_5_FLASH_LITE: ModelPricing(
@@ -122,10 +122,10 @@ def get_default_registry() -> ModelPricingRegistry:
     return ModelPricingRegistry()
 
 
-def calculate_cost(
+def compute_cost(
     *,
-    prompt_tokens: int,
-    completion_tokens: int,
+    input_tokens: int,
+    output_tokens: int,
     model: Model | str,
     registry: ModelPricingRegistry | None = None,
 ) -> UsageCost | None:
@@ -135,35 +135,35 @@ def calculate_cost(
     if pricing is None:
         return None
 
-    input_cost = (Decimal(prompt_tokens) / MILLION) * pricing.input_cost_per_million
-    output_cost = (Decimal(completion_tokens) / MILLION) * pricing.output_cost_per_million
+    input_cost = (Decimal(input_tokens) / MILLION) * pricing.input_cost_per_million
+    output_cost = (Decimal(output_tokens) / MILLION) * pricing.output_cost_per_million
 
     return UsageCost(input_cost=input_cost, output_cost=output_cost)
 
 
-def calculate_cost_from_usage(
-    usage: CompletionUsage,
+def compute_cost_from_usage(
+    usage: Usage,
     model: Model | str,
     *,
     registry: ModelPricingRegistry | None = None,
 ) -> UsageCost | None:
-    return calculate_cost(
-        prompt_tokens=usage.prompt_tokens,
-        completion_tokens=usage.completion_tokens,
+    return compute_cost(
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
         model=model,
         registry=registry,
     )
 
 
-class CostTracker:
+class UsageTracker:
     def __init__(self, *, registry: ModelPricingRegistry | None = None) -> None:
         self._registry = registry or get_default_registry()
-        self._results: list[CostResult] = []
+        self._results: list[UsageSnapshot] = []
 
-    def track(self, *, prompt_tokens: int, completion_tokens: int, model: Model | str) -> CostResult | None:
-        cost = calculate_cost(
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
+    def track(self, *, input_tokens: int, output_tokens: int, model: Model | str) -> UsageSnapshot | None:
+        cost = compute_cost(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
             model=model,
             registry=self._registry,
         )
@@ -171,30 +171,30 @@ class CostTracker:
         if cost is None:
             return None
 
-        result = CostResult(
-            prompt_tokens=prompt_tokens,
-            completion_tokens=completion_tokens,
-            total_tokens=prompt_tokens + completion_tokens,
+        result = UsageSnapshot(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=input_tokens + output_tokens,
             cost=cost,
             model=model,
         )
         self._results.append(result)
         return result
 
-    def track_usage(self, usage: CompletionUsage, model: Model | str) -> CostResult | None:
-        return self.track(prompt_tokens=usage.prompt_tokens, completion_tokens=usage.completion_tokens, model=model)
+    def track_usage(self, usage: Usage, model: Model | str) -> UsageSnapshot | None:
+        return self.track(input_tokens=usage.input_tokens, output_tokens=usage.output_tokens, model=model)
 
     @property
-    def results(self) -> list[CostResult]:
+    def results(self) -> list[UsageSnapshot]:
         return self._results.copy()
 
     @property
-    def total_prompt_tokens(self) -> int:
-        return sum(r.prompt_tokens for r in self._results)
+    def total_input_tokens(self) -> int:
+        return sum(r.input_tokens for r in self._results)
 
     @property
-    def total_completion_tokens(self) -> int:
-        return sum(r.completion_tokens for r in self._results)
+    def total_output_tokens(self) -> int:
+        return sum(r.output_tokens for r in self._results)
 
     @property
     def total_tokens(self) -> int:
@@ -220,6 +220,6 @@ class CostTracker:
         self._results.clear()
 
     def __add__(self, other: Self) -> Self:
-        combined = CostTracker(registry=self._registry)
+        combined = UsageTracker(registry=self._registry)
         combined._results = self._results.copy() + other._results.copy()
         return combined  # type: ignore[return-value]

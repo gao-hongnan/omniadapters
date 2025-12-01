@@ -4,18 +4,18 @@ from decimal import Decimal
 
 import pytest
 
-from omniadapters.core.costs import (
-    CostResult,
-    CostTracker,
+from omniadapters.core.enums import Model, Provider
+from omniadapters.core.models import Usage
+from omniadapters.core.usage import (
     ModelPricing,
     ModelPricingRegistry,
     UsageCost,
-    calculate_cost,
-    calculate_cost_from_usage,
+    UsageSnapshot,
+    UsageTracker,
+    compute_cost,
+    compute_cost_from_usage,
     get_default_registry,
 )
-from omniadapters.core.enums import Model, Provider
-from omniadapters.core.models import CompletionUsage
 
 
 class TestModelPricing:
@@ -87,31 +87,6 @@ class TestModelPricingRegistry:
         pricing = registry.get("gpt-4o-some-variant")
         assert pricing is not None
 
-    def test_custom_pricing_override(self) -> None:
-        custom = {
-            Model.GPT_4O: ModelPricing(
-                input_cost_per_million=Decimal("1.00"),
-                output_cost_per_million=Decimal("2.00"),
-                provider=Provider.OPENAI,
-            )
-        }
-        registry = ModelPricingRegistry(custom_pricing=custom)
-        pricing = registry.get(Model.GPT_4O)
-        assert pricing is not None
-        assert pricing.input_cost_per_million == Decimal("1.00")
-
-    def test_register_new_model(self) -> None:
-        registry = ModelPricingRegistry()
-        new_pricing = ModelPricing(
-            input_cost_per_million=Decimal("5.00"),
-            output_cost_per_million=Decimal("10.00"),
-            provider=Provider.ANTHROPIC,
-        )
-        registry.register(Model.CLAUDE_SONNET_4_5, new_pricing)
-        pricing = registry.get(Model.CLAUDE_SONNET_4_5)
-        assert pricing is not None
-        assert pricing.input_cost_per_million == Decimal("5.00")
-
     def test_list_models_all(self) -> None:
         registry = get_default_registry()
         models = registry.list_models()
@@ -127,11 +102,11 @@ class TestModelPricingRegistry:
         assert all("claude" in m.value for m in anthropic_models)
 
 
-class TestCalculateCost:
-    def test_calculate_cost_gpt4o(self) -> None:
-        cost = calculate_cost(
-            prompt_tokens=1000,
-            completion_tokens=500,
+class TestComputeCost:
+    def test_compute_cost_gpt4o(self) -> None:
+        cost = compute_cost(
+            input_tokens=1000,
+            output_tokens=500,
             model=Model.GPT_4O,
         )
         assert cost is not None
@@ -141,86 +116,66 @@ class TestCalculateCost:
         assert cost.output_cost == expected_output
         assert cost.total_cost == expected_input + expected_output
 
-    def test_calculate_cost_unknown_model(self) -> None:
-        cost = calculate_cost(
-            prompt_tokens=1000,
-            completion_tokens=500,
+    def test_compute_cost_unknown_model(self) -> None:
+        cost = compute_cost(
+            input_tokens=1000,
+            output_tokens=500,
             model="unknown-model-xyz",
         )
         assert cost is None
 
-    def test_calculate_cost_with_custom_registry(self) -> None:
-        custom = {
-            Model.GPT_4O_MINI: ModelPricing(
-                input_cost_per_million=Decimal("1.00"),
-                output_cost_per_million=Decimal("1.00"),
-                provider=Provider.OPENAI,
-            )
-        }
-        registry = ModelPricingRegistry(custom_pricing=custom)
-        cost = calculate_cost(
-            prompt_tokens=1_000_000,
-            completion_tokens=1_000_000,
-            model=Model.GPT_4O_MINI,
-            registry=registry,
-        )
-        assert cost is not None
-        assert cost.input_cost == Decimal("1.00")
-        assert cost.output_cost == Decimal("1.00")
-        assert cost.total_cost == Decimal("2.00")
 
-
-class TestCalculateCostFromUsage:
-    def test_calculate_from_usage(self) -> None:
-        usage = CompletionUsage(
-            prompt_tokens=2000,
-            completion_tokens=1000,
+class TestComputeCostFromUsage:
+    def test_compute_from_usage(self) -> None:
+        usage = Usage(
+            input_tokens=2000,
+            output_tokens=1000,
             total_tokens=3000,
         )
-        cost = calculate_cost_from_usage(usage, Model.GPT_4O)
+        cost = compute_cost_from_usage(usage, Model.GPT_4O)
         assert cost is not None
         assert cost.total_cost > 0
 
 
-class TestCostTracker:
+class TestUsageTracker:
     def test_track_single_request(self) -> None:
-        tracker = CostTracker()
+        tracker = UsageTracker()
         result = tracker.track(
-            prompt_tokens=1000,
-            completion_tokens=500,
+            input_tokens=1000,
+            output_tokens=500,
             model=Model.GPT_4O,
         )
         assert result is not None
-        assert result.prompt_tokens == 1000
-        assert result.completion_tokens == 500
+        assert result.input_tokens == 1000
+        assert result.output_tokens == 500
         assert result.total_tokens == 1500
         assert result.model == Model.GPT_4O
 
     def test_track_multiple_requests(self) -> None:
-        tracker = CostTracker()
-        tracker.track(prompt_tokens=1000, completion_tokens=500, model=Model.GPT_4O)
-        tracker.track(prompt_tokens=2000, completion_tokens=1000, model=Model.GPT_4O)
+        tracker = UsageTracker()
+        tracker.track(input_tokens=1000, output_tokens=500, model=Model.GPT_4O)
+        tracker.track(input_tokens=2000, output_tokens=1000, model=Model.GPT_4O)
 
         assert tracker.request_count == 2
-        assert tracker.total_prompt_tokens == 3000
-        assert tracker.total_completion_tokens == 1500
+        assert tracker.total_input_tokens == 3000
+        assert tracker.total_output_tokens == 1500
         assert tracker.total_tokens == 4500
 
     def test_track_unknown_model_returns_none(self) -> None:
-        tracker = CostTracker()
+        tracker = UsageTracker()
         result = tracker.track(
-            prompt_tokens=1000,
-            completion_tokens=500,
+            input_tokens=1000,
+            output_tokens=500,
             model="unknown-model",
         )
         assert result is None
         assert tracker.request_count == 0
 
     def test_track_usage_method(self) -> None:
-        tracker = CostTracker()
-        usage = CompletionUsage(
-            prompt_tokens=1000,
-            completion_tokens=500,
+        tracker = UsageTracker()
+        usage = Usage(
+            input_tokens=1000,
+            output_tokens=500,
             total_tokens=1500,
         )
         result = tracker.track_usage(usage, Model.GPT_4O)
@@ -228,16 +183,16 @@ class TestCostTracker:
         assert tracker.request_count == 1
 
     def test_total_costs(self) -> None:
-        tracker = CostTracker()
-        tracker.track(prompt_tokens=1_000_000, completion_tokens=500_000, model=Model.GPT_4O)
+        tracker = UsageTracker()
+        tracker.track(input_tokens=1_000_000, output_tokens=500_000, model=Model.GPT_4O)
 
         assert tracker.total_input_cost == Decimal("2.50")
         assert tracker.total_output_cost == Decimal("5.00")
         assert tracker.total_cost == Decimal("7.50")
 
     def test_clear_tracker(self) -> None:
-        tracker = CostTracker()
-        tracker.track(prompt_tokens=1000, completion_tokens=500, model=Model.GPT_4O)
+        tracker = UsageTracker()
+        tracker.track(input_tokens=1000, output_tokens=500, model=Model.GPT_4O)
         tracker.clear()
 
         assert tracker.request_count == 0
@@ -245,8 +200,8 @@ class TestCostTracker:
         assert tracker.total_cost == Decimal(0)
 
     def test_results_property_returns_copy(self) -> None:
-        tracker = CostTracker()
-        tracker.track(prompt_tokens=1000, completion_tokens=500, model=Model.GPT_4O)
+        tracker = UsageTracker()
+        tracker.track(input_tokens=1000, output_tokens=500, model=Model.GPT_4O)
 
         results = tracker.results
         results.clear()
@@ -254,27 +209,27 @@ class TestCostTracker:
         assert tracker.request_count == 1
 
     def test_add_trackers(self) -> None:
-        tracker1 = CostTracker()
-        tracker1.track(prompt_tokens=1000, completion_tokens=500, model=Model.GPT_4O)
+        tracker1 = UsageTracker()
+        tracker1.track(input_tokens=1000, output_tokens=500, model=Model.GPT_4O)
 
-        tracker2 = CostTracker()
-        tracker2.track(prompt_tokens=2000, completion_tokens=1000, model=Model.GPT_4O)
+        tracker2 = UsageTracker()
+        tracker2.track(input_tokens=2000, output_tokens=1000, model=Model.GPT_4O)
 
         combined = tracker1 + tracker2
 
         assert combined.request_count == 2
-        assert combined.total_prompt_tokens == 3000
-        assert combined.total_completion_tokens == 1500
+        assert combined.total_input_tokens == 3000
+        assert combined.total_output_tokens == 1500
 
 
-class TestCostResult:
-    def test_cost_result_immutable(self) -> None:
-        result = CostResult(
-            prompt_tokens=1000,
-            completion_tokens=500,
+class TestUsageSnapshot:
+    def test_usage_snapshot_immutable(self) -> None:
+        result = UsageSnapshot(
+            input_tokens=1000,
+            output_tokens=500,
             total_tokens=1500,
             cost=UsageCost(input_cost=Decimal("0.001"), output_cost=Decimal("0.002")),
             model=Model.GPT_4O,
         )
         with pytest.raises((TypeError, ValueError)):
-            result.prompt_tokens = 2000  # type: ignore[misc]
+            result.input_tokens = 2000  # type: ignore[misc]

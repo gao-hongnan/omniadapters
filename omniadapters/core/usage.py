@@ -99,32 +99,22 @@ MODEL_PRICING_REGISTRY: dict[Model, ModelPricing] = {
 
 
 class ModelPricingRegistry:
-    def __init__(self, *, custom_pricing: dict[Model, ModelPricing] | None = None) -> None:
-        self._registry: dict[Model, ModelPricing] = {**MODEL_PRICING_REGISTRY}
-        if custom_pricing:
-            self._registry.update(custom_pricing)
-
     def get(self, model: Model | str) -> ModelPricing | None:
         if isinstance(model, Model):
-            return self._registry.get(model)
-
+            return MODEL_PRICING_REGISTRY.get(model)
         try:
-            return self._registry[Model(model)]
+            return MODEL_PRICING_REGISTRY[Model(model)]
         except ValueError:
             pass
-
-        for known_model, pricing in self._registry.items():
+        for known_model, pricing in MODEL_PRICING_REGISTRY.items():
             if known_model.value in model or model in known_model.value:
                 return pricing
         return None
 
-    def register(self, model: Model, pricing: ModelPricing) -> None:
-        self._registry[model] = pricing
-
     def list_models(self, *, provider: Provider | None = None) -> list[Model]:
         if provider is None:
-            return list(self._registry.keys())
-        return [m for m, p in self._registry.items() if p.provider == provider]
+            return list(MODEL_PRICING_REGISTRY.keys())
+        return [m for m, p in MODEL_PRICING_REGISTRY.items() if p.provider == provider]
 
 
 @lru_cache(maxsize=1)
@@ -170,13 +160,7 @@ class CostTracker:
         self._registry = registry or get_default_registry()
         self._results: list[CostResult] = []
 
-    def track(
-        self,
-        *,
-        prompt_tokens: int,
-        completion_tokens: int,
-        model: Model | str,
-    ) -> CostResult | None:
+    def track(self, *, prompt_tokens: int, completion_tokens: int, model: Model | str) -> CostResult | None:
         cost = calculate_cost(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
@@ -198,11 +182,7 @@ class CostTracker:
         return result
 
     def track_usage(self, usage: CompletionUsage, model: Model | str) -> CostResult | None:
-        return self.track(
-            prompt_tokens=usage.prompt_tokens,
-            completion_tokens=usage.completion_tokens,
-            model=model,
-        )
+        return self.track(prompt_tokens=usage.prompt_tokens, completion_tokens=usage.completion_tokens, model=model)
 
     @property
     def results(self) -> list[CostResult]:

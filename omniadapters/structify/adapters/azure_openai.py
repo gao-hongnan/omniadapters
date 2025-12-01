@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import instructor
 
-_AZURE_OPENAI_IMPORT_ERROR = (
-    "Azure OpenAI provider requires 'openai' package. Install with: uv add omniadapters[openai]"
-)
+from omniadapters.core.constants import AZURE_OPENAI_IMPORT_ERROR
 
 try:
     from openai import AsyncAzureOpenAI
     from openai.types.chat import ChatCompletion
 except ImportError as e:
-    raise ImportError(_AZURE_OPENAI_IMPORT_ERROR) from e
+    raise ImportError(AZURE_OPENAI_IMPORT_ERROR) from e
 
 from omniadapters.core.models import AzureOpenAIProviderConfig
 from omniadapters.structify.adapters.base import BaseAdapter

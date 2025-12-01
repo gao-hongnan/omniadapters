@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 import instructor
 
-_GEMINI_IMPORT_ERROR = "Gemini provider requires 'google-genai' package. Install with: uv add omniadapters[gemini]"
+from omniadapters.core.constants import GEMINI_IMPORT_ERROR
 
 try:
     from google import genai
     from google.genai.types import GenerateContentConfig, GenerateContentResponse
 except ImportError as e:
-    raise ImportError(_GEMINI_IMPORT_ERROR) from e
+    raise ImportError(GEMINI_IMPORT_ERROR) from e
 
 from omniadapters.core.models import GeminiProviderConfig
 from omniadapters.structify.adapters.base import BaseAdapter

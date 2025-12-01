@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import instructor
 
-_ANTHROPIC_IMPORT_ERROR = (
-    "Anthropic provider requires 'anthropic' package. Install with: uv add omniadapters[anthropic]"
-)
+from omniadapters.core.constants import ANTHROPIC_IMPORT_ERROR
 
 try:
     from anthropic import AsyncAnthropic
     from anthropic.types import Message as AnthropicResponse
 except ImportError as e:
-    raise ImportError(_ANTHROPIC_IMPORT_ERROR) from e
+    raise ImportError(ANTHROPIC_IMPORT_ERROR) from e
 
 from omniadapters.core.models import AnthropicProviderConfig
 from omniadapters.structify.adapters.base import BaseAdapter

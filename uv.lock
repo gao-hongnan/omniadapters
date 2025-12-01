@@ -1594,7 +1594,6 @@ dependencies = [
     { name = "jsonref" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "tiktoken" },
 ]
 
 [package.optional-dependencies]
@@ -1602,6 +1601,7 @@ all = [
     { name = "anthropic" },
     { name = "google-genai" },
     { name = "openai" },
+    { name = "tiktoken" },
 ]
 anthropic = [
     { name = "anthropic" },
@@ -1614,6 +1614,9 @@ openai = [
 ]
 playground = [
     { name = "pydanticonf" },
+]
+token = [
+    { name = "tiktoken" },
 ]
 
 [package.dev-dependencies]
@@ -1685,13 +1688,14 @@ requires-dist = [
     { name = "omniadapters", extras = ["anthropic"], marker = "extra == 'all'" },
     { name = "omniadapters", extras = ["gemini"], marker = "extra == 'all'" },
     { name = "omniadapters", extras = ["openai"], marker = "extra == 'all'" },
+    { name = "omniadapters", extras = ["token"], marker = "extra == 'all'" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=2.8.0,<3.0.0" },
     { name = "pydantic", specifier = ">=2.12.0,<2.13.0" },
     { name = "pydantic-settings", specifier = ">=2.11.0,<2.12.0" },
     { name = "pydanticonf", marker = "extra == 'playground'", specifier = ">=1.0.0" },
-    { name = "tiktoken", specifier = ">=0.12.0" },
+    { name = "tiktoken", marker = "extra == 'token'", specifier = ">=0.12.0" },
 ]
-provides-extras = ["openai", "anthropic", "gemini", "all", "playground"]
+provides-extras = ["token", "openai", "anthropic", "gemini", "all", "playground"]
 
 [package.metadata.requires-dev]
 dev = [

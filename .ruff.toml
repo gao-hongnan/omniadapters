@@ -54,6 +54,7 @@ ignore = [
     "TD002", # Missing author in TODO; try: `# TODO(<author_name>): ...` or `# TODO @<author_name>: ...`
     "TD003", # Missing issue link for this TODO
     "FIX002", # Line contains TODO, consider resolving the issue
+    "RET504", # Unnecessary assignment to `result` before `return` statement
 ]
 fixable = ["ALL"]
 unfixable = []

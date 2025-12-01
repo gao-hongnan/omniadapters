@@ -41,14 +41,15 @@ dependencies = [
     "pydantic-settings>=2.11.0,<2.12.0",
     "jsonref>=1.1.0,<2.0.0",
     "instructor>=1.13.0",
-    "tiktoken>=0.12.0",
 ]
 
 [project.optional-dependencies]
+token = ["tiktoken>=0.12.0"]
 openai = ["openai>=2.8.0,<3.0.0"]
 anthropic = ["anthropic>=0.72.0,<1.0.0"]
 gemini = ["google-genai>=1.42.0,<1.51.0"]
 all = [
+    "omniadapters[token]",
     "omniadapters[openai]",
     "omniadapters[anthropic]",
     "omniadapters[gemini]",
@@ -110,6 +111,7 @@ Changelog = "https://github.com/gao-hongnan/omniadapters/releases"
 
 [tool.hatch.build.targets.wheel]
 packages = ["omniadapters"]
+artifacts = ["omniadapters/.tiktoken_cache/**"]
 exclude = [
     "tests/",
     "docs/",

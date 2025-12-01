@@ -10,7 +10,12 @@ _BUNDLED_CACHE_DIR = Path(__file__).parent.parent / ".tiktoken_cache"
 if "TIKTOKEN_CACHE_DIR" not in os.environ and _BUNDLED_CACHE_DIR.exists():
     os.environ["TIKTOKEN_CACHE_DIR"] = str(_BUNDLED_CACHE_DIR)
 
-import tiktoken
+try:
+    import tiktoken
+except ImportError as e:
+    from omniadapters.core.constants import TIKTOKEN_IMPORT_ERROR
+
+    raise ImportError(TIKTOKEN_IMPORT_ERROR) from e
 
 from omniadapters.core.constants import ANTHROPIC_IMPORT_ERROR, GEMINI_IMPORT_ERROR
 from omniadapters.core.enums import Model, Provider, infer_provider
@@ -19,7 +24,7 @@ if TYPE_CHECKING:
     from anthropic import AsyncAnthropic
     from google import genai
 
-FALLBACK_ENCODING = "cl100k_base"
+FALLBACK_ENCODING = "o200k_base"
 
 
 @runtime_checkable

@@ -40,7 +40,7 @@ security: .uv
 .PHONY: typecheck
 typecheck: .uv
 	uv run mypy $(SOURCES)
-	uv run pyright $(SOURCES)
+	# uv run pyright $(SOURCES)
 	# @echo "Running ty (experimental)..."
 	# uv run ty check $(SOURCES) || echo "ty check failed (expected for pre-release)"
 

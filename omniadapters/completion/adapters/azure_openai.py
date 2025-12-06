@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
 
-from omniadapters.core.constants import AZURE_OPENAI_IMPORT_ERROR
+from ...core.constants import AZURE_OPENAI_IMPORT_ERROR
 
 try:
     from openai import AsyncAzureOpenAI
@@ -13,9 +13,9 @@ try:
 except ImportError as e:
     raise ImportError(AZURE_OPENAI_IMPORT_ERROR) from e
 
-from omniadapters.completion.adapters.base import BaseAdapter
-from omniadapters.core.models import AzureOpenAIProviderConfig, CompletionResponse, StreamChunk, Usage
-from omniadapters.core.usage_converter import to_usage
+from ...core.models import AzureOpenAIProviderConfig, CompletionResponse, StreamChunk, Usage
+from ...core.usage_converter import to_usage
+from .base import BaseAdapter
 
 
 @to_usage.register(OpenAIUsage)
@@ -41,7 +41,7 @@ def _(usage: OpenAIUsage) -> Usage:
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from omniadapters.core.types import MessageParam
+    from ...core.types import MessageParam
 
 
 class AzureOpenAIAdapter(

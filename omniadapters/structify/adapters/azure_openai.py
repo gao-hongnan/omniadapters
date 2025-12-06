@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import instructor
 
-from omniadapters.core.constants import AZURE_OPENAI_IMPORT_ERROR
+from ...core.constants import AZURE_OPENAI_IMPORT_ERROR
 
 try:
     from openai import AsyncAzureOpenAI
@@ -10,8 +10,8 @@ try:
 except ImportError as e:
     raise ImportError(AZURE_OPENAI_IMPORT_ERROR) from e
 
-from omniadapters.core.models import AzureOpenAIProviderConfig
-from omniadapters.structify.adapters.base import BaseAdapter
+from ...core.models import AzureOpenAIProviderConfig
+from .base import BaseAdapter
 
 
 class AzureOpenAIAdapter(BaseAdapter[AzureOpenAIProviderConfig, AsyncAzureOpenAI, ChatCompletion]):

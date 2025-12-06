@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import instructor
 
-from omniadapters.core.constants import OPENAI_IMPORT_ERROR
+from ...core.constants import OPENAI_IMPORT_ERROR
 
 try:
     from openai import AsyncOpenAI
@@ -10,8 +10,8 @@ try:
 except ImportError as e:
     raise ImportError(OPENAI_IMPORT_ERROR) from e
 
-from omniadapters.core.models import OpenAIProviderConfig
-from omniadapters.structify.adapters.base import BaseAdapter
+from ...core.models import OpenAIProviderConfig
+from .base import BaseAdapter
 
 
 class OpenAIAdapter(BaseAdapter[OpenAIProviderConfig, AsyncOpenAI, ChatCompletion]):

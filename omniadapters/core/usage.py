@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Self
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from omniadapters.core.enums import Model, Provider
+from .enums import Model, Provider
 
 if TYPE_CHECKING:
-    from omniadapters.core.models import Usage
+    from .models import Usage
 
 
 class ModelPricing(BaseModel):

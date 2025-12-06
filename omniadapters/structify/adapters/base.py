@@ -4,10 +4,10 @@ import threading
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Generic, Literal, overload
 
-from omniadapters.core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
-from omniadapters.core.types import ClientResponseT, ClientT, ProviderConfigT, StructuredResponseT
-from omniadapters.structify.hooks import ahook_instructor
-from omniadapters.structify.models import CompletionResult
+from ...core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
+from ...core.types import ClientResponseT, ClientT, ProviderConfigT, StructuredResponseT
+from ..hooks import ahook_instructor
+from ..models import CompletionResult
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -15,9 +15,9 @@ if TYPE_CHECKING:
     from instructor import AsyncInstructor
     from openai.types.chat import ChatCompletionMessageParam
 
-    from omniadapters.core.models import CompletionClientParams
-    from omniadapters.structify.hooks import CompletionTrace
-    from omniadapters.structify.models import InstructorConfig
+    from ...core.models import CompletionClientParams
+    from ..hooks import CompletionTrace
+    from ..models import InstructorConfig
 
 
 class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientResponseT]):

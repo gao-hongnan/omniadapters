@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import instructor
 
-from omniadapters.core.constants import ANTHROPIC_IMPORT_ERROR
+from ...core.constants import ANTHROPIC_IMPORT_ERROR
 
 try:
     from anthropic import AsyncAnthropic
@@ -10,8 +10,8 @@ try:
 except ImportError as e:
     raise ImportError(ANTHROPIC_IMPORT_ERROR) from e
 
-from omniadapters.core.models import AnthropicProviderConfig
-from omniadapters.structify.adapters.base import BaseAdapter
+from ...core.models import AnthropicProviderConfig
+from .base import BaseAdapter
 
 
 class AnthropicAdapter(BaseAdapter[AnthropicProviderConfig, AsyncAnthropic, AnthropicResponse]):

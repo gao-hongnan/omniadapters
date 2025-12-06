@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never, overload
 
-from omniadapters.core.models import (
+from ..core.models import (
     AnthropicProviderConfig,
     AzureOpenAIProviderConfig,
     GeminiProviderConfig,
@@ -10,11 +10,7 @@ from omniadapters.core.models import (
 )
 
 if TYPE_CHECKING:
-    from omniadapters.completion.adapters.anthropic import AnthropicAdapter
-    from omniadapters.completion.adapters.azure_openai import AzureOpenAIAdapter
-    from omniadapters.completion.adapters.gemini import GeminiAdapter
-    from omniadapters.completion.adapters.openai import OpenAIAdapter
-    from omniadapters.core.models import (
+    from ..core.models import (
         AnthropicCompletionClientParams,
         AzureOpenAICompletionClientParams,
         CompletionClientParams,
@@ -22,6 +18,10 @@ if TYPE_CHECKING:
         OpenAICompletionClientParams,
         ProviderConfig,
     )
+    from .adapters.anthropic import AnthropicAdapter
+    from .adapters.azure_openai import AzureOpenAIAdapter
+    from .adapters.gemini import GeminiAdapter
+    from .adapters.openai import OpenAIAdapter
 
 
 @overload
@@ -71,28 +71,28 @@ def create_adapter(
 ) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter | AzureOpenAIAdapter:
     match provider_config:
         case OpenAIProviderConfig():
-            from omniadapters.completion.adapters.openai import OpenAIAdapter
+            from .adapters.openai import OpenAIAdapter
 
             return OpenAIAdapter(
                 provider_config=provider_config,
                 completion_params=completion_params,
             )
         case AnthropicProviderConfig():
-            from omniadapters.completion.adapters.anthropic import AnthropicAdapter
+            from .adapters.anthropic import AnthropicAdapter
 
             return AnthropicAdapter(
                 provider_config=provider_config,
                 completion_params=completion_params,
             )
         case GeminiProviderConfig():
-            from omniadapters.completion.adapters.gemini import GeminiAdapter
+            from .adapters.gemini import GeminiAdapter
 
             return GeminiAdapter(
                 provider_config=provider_config,
                 completion_params=completion_params,
             )
         case AzureOpenAIProviderConfig():
-            from omniadapters.completion.adapters.azure_openai import AzureOpenAIAdapter
+            from .adapters.azure_openai import AzureOpenAIAdapter
 
             return AzureOpenAIAdapter(
                 provider_config=provider_config,

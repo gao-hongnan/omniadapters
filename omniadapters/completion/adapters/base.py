@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, overload
 
 from instructor import Mode, handle_response_model
 
-from omniadapters.core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
-from omniadapters.core.types import (
+from ...core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
+from ...core.types import (
     ClientMessageT,
     ClientResponseT,
     ClientT,
@@ -18,8 +18,8 @@ from omniadapters.core.types import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from omniadapters.core.models import CompletionClientParams, CompletionResponse, StreamChunk
-    from omniadapters.core.types import MessageParam
+    from ...core.models import CompletionClientParams, CompletionResponse, StreamChunk
+    from ...core.types import MessageParam
 
 
 class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientMessageT, ClientResponseT, StreamChunkT]):

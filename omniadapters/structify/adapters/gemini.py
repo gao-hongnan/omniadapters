@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 import instructor
 
-from omniadapters.core.constants import GEMINI_IMPORT_ERROR
+from ...core.constants import GEMINI_IMPORT_ERROR
 
 try:
     from google import genai
@@ -12,17 +12,17 @@ try:
 except ImportError as e:
     raise ImportError(GEMINI_IMPORT_ERROR) from e
 
-from omniadapters.core.models import GeminiProviderConfig
-from omniadapters.structify.adapters.base import BaseAdapter
-from omniadapters.structify.hooks import CompletionTrace, ahook_instructor
+from ...core.models import GeminiProviderConfig
+from ..hooks import CompletionTrace, ahook_instructor
+from .base import BaseAdapter
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from openai.types.chat import ChatCompletionMessageParam
 
-    from omniadapters.core.types import StructuredResponseT
-    from omniadapters.structify.models import CompletionResult
+    from ...core.types import StructuredResponseT
+    from ..models import CompletionResult
 
 
 class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateContentResponse]):

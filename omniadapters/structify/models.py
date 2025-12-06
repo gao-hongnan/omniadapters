@@ -7,9 +7,9 @@ from typing import Generic
 import instructor  # noqa: TC002 - Pydantic needs runtime access to instructor.Mode
 from pydantic import BaseModel, ConfigDict
 
-from omniadapters.core.models import Allowable
-from omniadapters.core.types import ClientResponseT, StructuredResponseT
-from omniadapters.structify.hooks import CompletionTrace  # noqa: TC001
+from ..core.models import Allowable
+from ..core.types import ClientResponseT, StructuredResponseT
+from .hooks import CompletionTrace  # noqa: TC001
 
 
 class InstructorConfig(Allowable):

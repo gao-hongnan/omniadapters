@@ -1,5 +1,3 @@
-from omniadapters.structify.adapters.base import BaseAdapter
+from .base import BaseAdapter
 
-__all__ = [
-    "BaseAdapter",
-]
+__all__ = ["BaseAdapter"]

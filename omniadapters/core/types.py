@@ -10,7 +10,7 @@ from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletio
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from omniadapters.core.models import BaseProviderConfig, CompletionClientParams
+    from .models import BaseProviderConfig, CompletionClientParams
 
 type MessageParam = dict[str, str | dict[str, Any] | Image | Audio | list[str | dict[str, Any] | Image | Audio]]
 ClientT = TypeVar("ClientT")

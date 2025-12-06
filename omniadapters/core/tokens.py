@@ -13,12 +13,12 @@ if "TIKTOKEN_CACHE_DIR" not in os.environ and _BUNDLED_CACHE_DIR.exists():
 try:
     import tiktoken
 except ImportError as e:
-    from omniadapters.core.constants import TIKTOKEN_IMPORT_ERROR
+    from .constants import TIKTOKEN_IMPORT_ERROR
 
     raise ImportError(TIKTOKEN_IMPORT_ERROR) from e
 
-from omniadapters.core.constants import ANTHROPIC_IMPORT_ERROR, GEMINI_IMPORT_ERROR
-from omniadapters.core.enums import Model, Provider, infer_provider
+from .constants import ANTHROPIC_IMPORT_ERROR, GEMINI_IMPORT_ERROR
+from .enums import Model, Provider, infer_provider
 
 if TYPE_CHECKING:
     from anthropic import AsyncAnthropic

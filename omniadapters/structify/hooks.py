@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
     import instructor
 
-from omniadapters.core.types import ClientResponseT, MessageParam
+from ..core.types import ClientResponseT, MessageParam
 
 
 class HookHandler(Protocol):

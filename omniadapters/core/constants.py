@@ -9,3 +9,6 @@ AZURE_OPENAI_IMPORT_ERROR = (
     "Azure OpenAI provider requires 'openai' package. Install with: `uv add omniadapters[openai]`"
 )
 TIKTOKEN_IMPORT_ERROR = "Token counting requires 'tiktoken' package. Install with: `uv add omniadapters[token]`"
+PYDANTIC_AI_IMPORT_ERROR = (
+    "Pydantic AI module requires 'pydantic-ai' package. Install with: `uv add omniadapters[pydantic-ai]`"
+)

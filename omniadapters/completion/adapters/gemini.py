@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
 
-from omniadapters.core.constants import GEMINI_IMPORT_ERROR
+from ...core.constants import GEMINI_IMPORT_ERROR
 
 try:
     from google import genai
@@ -21,9 +21,9 @@ try:
 except ImportError as e:
     raise ImportError(GEMINI_IMPORT_ERROR) from e
 
-from omniadapters.completion.adapters.base import BaseAdapter
-from omniadapters.core.models import CompletionResponse, GeminiProviderConfig, StreamChunk, Usage
-from omniadapters.core.usage_converter import to_usage
+from ...core.models import CompletionResponse, GeminiProviderConfig, StreamChunk, Usage
+from ...core.usage_converter import to_usage
+from .base import BaseAdapter
 
 
 @to_usage.register(GeminiUsage)
@@ -41,7 +41,7 @@ def _(usage: GeminiUsage) -> Usage:
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from omniadapters.core.types import MessageParam
+    from ...core.types import MessageParam
 
 
 class GeminiAdapter(

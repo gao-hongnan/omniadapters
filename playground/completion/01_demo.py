@@ -19,7 +19,7 @@ uv run playground/completion/01_demo.py --trace --provider all
 uv run playground/completion/01_demo.py --provider openai --trace
 uv run playground/completion/01_demo.py --provider openai --prompt "Hello world" --stream --trace
 ```
-"""  # noqa: N999
+"""
 
 from __future__ import annotations
 

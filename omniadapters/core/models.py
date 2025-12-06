@@ -4,8 +4,8 @@ from typing import Annotated, Any, Generic, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
-from omniadapters.core.enums import Capability, Provider
-from omniadapters.core.types import ClientResponseT, StreamChunkType
+from .enums import Capability, Provider
+from .types import ClientResponseT, StreamChunkType
 
 
 class Allowable(BaseModel):

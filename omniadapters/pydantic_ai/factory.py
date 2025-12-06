@@ -8,5 +8,5 @@ if TYPE_CHECKING:
     from ..core.models import ProviderConfig
 
 
-def create_adapter(*, provider_config: ProviderConfig, model_name: str) -> PydanticAIAdapter[ProviderConfig]:
+def create_adapter(*, provider_config: ProviderConfig, model_name: str) -> PydanticAIAdapter:
     return PydanticAIAdapter(provider_config=provider_config, model_name=model_name)

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic
-
-from ..core.types import ProviderConfigT
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
 
+    from ..core.models import ProviderConfig
 
-class PydanticAIAdapter(Generic[ProviderConfigT]):
-    def __init__(self, *, provider_config: ProviderConfigT, model_name: str) -> None:
+
+class PydanticAIAdapter:
+    def __init__(self, *, provider_config: ProviderConfig, model_name: str) -> None:
         self.provider_config = provider_config
         self.model_name = model_name
 

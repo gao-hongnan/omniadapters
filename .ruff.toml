@@ -55,10 +55,14 @@ ignore = [
     "TD003", # Missing issue link for this TODO
     "FIX002", # Line contains TODO, consider resolving the issue
     "RET504", # Unnecessary assignment to `result` before `return` statement
+    "TID252",
 ]
 fixable = ["ALL"]
 unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[lint.per-file-ignores]
+"playground/**" = ["T201", "INP001", "N999"]
 
 [lint.isort]
 known-first-party = ["omniadapters"]

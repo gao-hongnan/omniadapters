@@ -74,6 +74,8 @@ from __future__ import annotations
 from types import NoneType
 from typing import TYPE_CHECKING, Any, overload
 
+from pydantic_ai.models import infer_model
+from pydantic_ai.providers import infer_provider_class
 from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
@@ -135,9 +137,7 @@ class PydanticAIAdapter:
         output_type: OutputSpec[_OutputT] | None = None,
         **agent_kwargs: Any,
     ) -> Agent[_DepsT, _OutputT]:
-        from pydantic_ai import Agent
-        from pydantic_ai.models import infer_model
-        from pydantic_ai.providers import infer_provider_class
+        from pydantic_ai import Agent  # NOTE: `Agent` can be a heavy import.
 
         provider_name: str = self.provider_config.provider
         client_kwargs = self.provider_config.get_client_kwargs()

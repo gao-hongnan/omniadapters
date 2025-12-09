@@ -1,9 +1,40 @@
+"""PydanticAI Agent Configuration Module.
+
+This module provides a Pydantic-based configuration model for creating
+PydanticAI Agent instances with validation and serialization support.
+
+Type Parameters
+---------------
+_DepsT : TypeVar, default=None
+    Type variable for agent dependencies. Captures the dependency type
+    from ``deps_type`` parameter and propagates it to the returned
+    ``Agent[_DepsT, _OutputT]``.
+
+_OutputT : TypeVar, default=str
+    Type variable for agent output. Captures the output type from
+    ``output_type`` parameter and propagates it to the returned
+    ``Agent[_DepsT, _OutputT]``.
+
+Notes
+-----
+Our TypeVars are **invariant** (no variance) because they appear in both
+input and output positions. See ``adapter.py`` module docstring for the
+full explanation of variance rules and why invariance is required here.
+
+See Also
+--------
+omniadapters.pydantic_ai.adapter : Detailed variance explanation.
+pydantic_ai.Agent : The PydanticAI Agent class.
+
+"""
+
 from __future__ import annotations
 
 from types import NoneType
-from typing import TYPE_CHECKING, Any, TypeVar, overload
+from typing import TYPE_CHECKING, Any, overload
 
 from pydantic import BaseModel, ConfigDict
+from typing_extensions import TypeVar
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
@@ -13,8 +44,8 @@ if TYPE_CHECKING:
 
 _CLIENT_KWARGS = frozenset({"api_key", "base_url", "http_client"})
 
-_DepsT = TypeVar("_DepsT")
-_OutputT = TypeVar("_OutputT")
+_DepsT = TypeVar("_DepsT", default=None)
+_OutputT = TypeVar("_OutputT", default=str)
 
 
 class AgentConfig(BaseModel):
@@ -63,7 +94,7 @@ class AgentConfig(BaseModel):
         deps_type: type[_DepsT | None] = NoneType,
         output_type: OutputSpec[_OutputT] | None = None,
         **overrides: Any,
-    ) -> Agent[Any, Any]:
+    ) -> Agent[_DepsT, _OutputT]:
         from pydantic_ai import Agent
 
         extras = dict(self.__pydantic_extra__ or {})
@@ -84,7 +115,7 @@ class AgentConfig(BaseModel):
         from pydantic_ai.models import infer_model
         from pydantic_ai.providers import infer_provider_class
 
-        def custom_provider_factory(name: str) -> Provider[Any]:
+        def custom_provider_factory(name: str) -> Provider[object]:
             provider_class = infer_provider_class(name)
             return provider_class(**client_kwargs)
 

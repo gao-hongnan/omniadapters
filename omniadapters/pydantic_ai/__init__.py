@@ -11,12 +11,10 @@ except ImportError as e:
     raise ImportError(PYDANTIC_AI_IMPORT_ERROR) from e
 
 from .adapter import PydanticAIAdapter
-from .config import AgentConfig
 from .factory import create_adapter
 
 __all__ = [
     "Agent",
-    "AgentConfig",
     "FinalResult",
     "ModelRetry",
     "ModelSettings",

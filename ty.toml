@@ -1,0 +1,52 @@
+[environment]
+python-version = "3.13"
+python = ".venv"
+root = ["omniadapters"]
+
+[src]
+include = ["omniadapters", "tests"]
+exclude = [
+    "**/.venv/**",
+    "**/venv/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/__pycache__/**",
+    "**/*.pyc",
+    "**/.pytest_cache/**",
+    "**/.mypy_cache/**",
+    "**/.ruff_cache/**",
+    "**/node_modules/**",
+    "**/playground/**",
+    "**/examples/**",
+]
+respect-ignore-files = true
+
+[rules]
+deprecated = "warn"
+redundant-cast = "warn"
+ambiguous-protocol-member = "warn"
+possibly-unresolved-reference = "warn"
+possibly-missing-attribute = "warn"
+invalid-argument-type = "ignore"
+invalid-key = "ignore"
+invalid-parameter-default = "ignore"
+unused-ignore-comment = "ignore"
+
+[[overrides]]
+include = ["tests/**"]
+[overrides.rules]
+possibly-unresolved-reference = "ignore"
+
+[[overrides]]
+include = ["omniadapters/pydantic_ai/**"]
+[overrides.rules]
+unresolved-import = "ignore"
+
+[[overrides]]
+include = ["omniadapters/structify/adapters/gemini.py", "omniadapters/structify/adapters/anthropic.py", "omniadapters/structify/adapters/openai.py", "omniadapters/structify/adapters/azure_openai.py"]
+[overrides.rules]
+possibly-missing-attribute = "ignore"
+
+[terminal]
+output-format = "full"
+error-on-warning = false

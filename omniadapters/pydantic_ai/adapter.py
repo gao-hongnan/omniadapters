@@ -72,11 +72,13 @@ pydantic_ai.output.OutputDataT : PydanticAI's covariant output TypeVar.
 from __future__ import annotations
 
 from types import NoneType
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, get_args, overload
 
-from pydantic_ai.models import infer_model
+from pydantic_ai.models import KnownModelName, infer_model
 from pydantic_ai.providers import infer_provider_class
 from typing_extensions import TypeVar
+
+_KNOWN_MODEL_NAMES: frozenset[str] = frozenset(get_args(KnownModelName))
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
@@ -90,7 +92,7 @@ _OutputT = TypeVar("_OutputT", default=str)
 
 
 class PydanticAIAdapter:
-    def __init__(self, *, provider_config: ProviderConfig, model_name: str) -> None:
+    def __init__(self, *, provider_config: ProviderConfig, model_name: KnownModelName | str) -> None:
         self.provider_config = provider_config
         self.model_name = model_name
 
@@ -146,8 +148,11 @@ class PydanticAIAdapter:
             provider_class: type[Provider[Any]] = infer_provider_class(name)
             return provider_class(**client_kwargs)
 
-        model_string = f"{provider_name}:{self.model_name}"
-        model = infer_model(model_string, provider_factory=custom_provider_factory)
+        if self.model_name in _KNOWN_MODEL_NAMES:
+            model = infer_model(self.model_name, provider_factory=custom_provider_factory)
+        else:
+            model_string = f"{provider_name}:{self.model_name}"
+            model = infer_model(model_string, provider_factory=custom_provider_factory)
 
         final_kwargs: dict[str, Any] = {"model": model}
         if deps_type is not NoneType:

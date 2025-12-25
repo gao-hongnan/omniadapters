@@ -62,9 +62,9 @@ docs: .uv
 .PHONY: ci
 ci: lint security typecheck test
 
-.PHONY: clean
-clean:
-	@./scripts/clean.sh
+.PHONY: clear-cache
+clear-cache: .uv
+	uv run python scripts/clear_cache.py
 
 .PHONY: help
 help:
@@ -82,5 +82,5 @@ help:
 	@echo "  ci                  Run full CI pipeline (lint, security, typecheck, test, coverage)"
 	@echo ""
 	@echo "Utility Commands:"
-	@echo "  clean               Clean build artifacts and cache files"
+	@echo "  clear-cache         Remove Python cache files and directories"
 	@echo "  help                Show this help message"

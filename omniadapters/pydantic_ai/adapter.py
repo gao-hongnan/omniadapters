@@ -72,11 +72,10 @@ pydantic_ai.output.OutputDataT : PydanticAI's covariant output TypeVar.
 from __future__ import annotations
 
 from types import NoneType
-from typing import TYPE_CHECKING, Any, get_args, overload
+from typing import TYPE_CHECKING, Any, TypeVar, get_args, overload
 
 from pydantic_ai.models import KnownModelName, infer_model
 from pydantic_ai.providers import infer_provider_class
-from typing_extensions import TypeVar
 
 _KNOWN_MODEL_NAMES: frozenset[str] = frozenset(get_args(KnownModelName))
 

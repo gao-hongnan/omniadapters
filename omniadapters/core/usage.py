@@ -65,6 +65,21 @@ MODEL_PRICING_REGISTRY: dict[Model, ModelPricing] = {
         output_cost_per_million=Decimal("4.40"),
         provider=Provider.OPENAI,
     ),
+    Model.GPT_5_4: ModelPricing(
+        input_cost_per_million=Decimal("2.50"),
+        output_cost_per_million=Decimal("15.00"),
+        provider=Provider.OPENAI,
+    ),
+    Model.GPT_5_4_MINI: ModelPricing(
+        input_cost_per_million=Decimal("0.75"),
+        output_cost_per_million=Decimal("4.50"),
+        provider=Provider.OPENAI,
+    ),
+    Model.GPT_5_4_NANO: ModelPricing(
+        input_cost_per_million=Decimal("0.20"),
+        output_cost_per_million=Decimal("1.25"),
+        provider=Provider.OPENAI,
+    ),
     Model.CLAUDE_SONNET_4_5: ModelPricing(
         input_cost_per_million=Decimal("3.00"),
         output_cost_per_million=Decimal("15.00"),
@@ -80,6 +95,16 @@ MODEL_PRICING_REGISTRY: dict[Model, ModelPricing] = {
         output_cost_per_million=Decimal("5.00"),
         provider=Provider.ANTHROPIC,
     ),
+    Model.CLAUDE_SONNET_4_6: ModelPricing(
+        input_cost_per_million=Decimal("3.00"),
+        output_cost_per_million=Decimal("15.00"),
+        provider=Provider.ANTHROPIC,
+    ),
+    Model.CLAUDE_OPUS_4_7: ModelPricing(
+        input_cost_per_million=Decimal("5.00"),
+        output_cost_per_million=Decimal("25.00"),
+        provider=Provider.ANTHROPIC,
+    ),
     Model.GEMINI_2_5_PRO: ModelPricing(
         input_cost_per_million=Decimal("1.25"),
         output_cost_per_million=Decimal("10.00"),
@@ -93,6 +118,16 @@ MODEL_PRICING_REGISTRY: dict[Model, ModelPricing] = {
     Model.GEMINI_2_5_FLASH_LITE: ModelPricing(
         input_cost_per_million=Decimal("0.10"),
         output_cost_per_million=Decimal("0.40"),
+        provider=Provider.GEMINI,
+    ),
+    Model.GEMINI_3_PRO: ModelPricing(
+        input_cost_per_million=Decimal("2.00"),
+        output_cost_per_million=Decimal("12.00"),
+        provider=Provider.GEMINI,
+    ),
+    Model.GEMINI_3_FLASH: ModelPricing(
+        input_cost_per_million=Decimal("0.50"),
+        output_cost_per_million=Decimal("3.00"),
         provider=Provider.GEMINI,
     ),
 }

@@ -40,7 +40,7 @@ class AdapterProtocol(Protocol[TAdapterCov]):
         *,
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> AsyncGenerator[TModel | CompletionResult[TModel, AnyType], None]: ...
+    ) -> AsyncGenerator[TModel | CompletionResult[TModel, AnyType]]: ...
 
 
 # Using SimpleTestModel and ComplexTestModel from conftest
@@ -207,7 +207,7 @@ class BaseAdapterIntegrationTest(ABC, Generic[TAdapter]):
         assert isinstance(result.is_recommended, bool)
 
     @asynccontextmanager
-    async def _resource_tracker(self, _adapter: TAdapter) -> AsyncGenerator[None, None]:
+    async def _resource_tracker(self, _adapter: TAdapter) -> AsyncGenerator[None]:
         """Context manager to track resource usage."""
         try:
             yield

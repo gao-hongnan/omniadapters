@@ -77,7 +77,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, get_args, overload
 from pydantic_ai.models import KnownModelName, infer_model
 from pydantic_ai.providers import infer_provider_class
 
-_KNOWN_MODEL_NAMES: frozenset[str] = frozenset(get_args(KnownModelName))
+_KNOWN_MODEL_NAMES: frozenset[str] = frozenset(get_args(KnownModelName.__value__))
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent

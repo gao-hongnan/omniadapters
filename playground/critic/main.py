@@ -56,7 +56,8 @@ async def run_batch_verification(
 def load_questions(file_path: str | Path) -> list[UserQuery]:
     file_path = Path(file_path)
     if file_path.suffix != ".json":
-        raise ValueError(f"Unsupported file format: {file_path.suffix}. Use JSON.")
+        msg = f"Unsupported file format: {file_path.suffix}. Use JSON."
+        raise ValueError(msg)
 
     with Path.open(file_path, encoding="utf-8") as f:
         data = json.load(f)

@@ -29,9 +29,11 @@ class JinjaPromptRenderer:
             template = self._jinja_env.get_template(template_path)
             return template.render(variables)
         except TemplateNotFound as e:
-            raise TemplateNotFound(f"Prompt template not found at '{template_path}' (looked for: {e.name})") from e
+            msg = f"Prompt template not found at '{template_path}' (looked for: {e.name})"
+            raise TemplateNotFound(msg) from e
         except UndefinedError as e:
-            raise UndefinedError(f"Missing required variable in template '{template_path}': {e.message}") from e
+            msg = f"Missing required variable in template '{template_path}': {e.message}"
+            raise UndefinedError(msg) from e
 
 
 @lru_cache(maxsize=1)

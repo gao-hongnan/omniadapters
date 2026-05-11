@@ -11,8 +11,7 @@
 # ]
 # ///
 
-"""
-Multi-provider image analysis with structured extraction.
+"""Multi-provider image analysis with structured extraction.
 
 Usage:
     # Default (all providers)
@@ -31,7 +30,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from typing import Any, Literal, Union, assert_never, cast
+from typing import Any, Literal, assert_never, cast
 
 from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, Field
@@ -66,7 +65,7 @@ class BoundingBox(BaseModel):
 class DetectedObject(BaseModel):
     label: str = Field(..., description="Object label/class")
     confidence: float = Field(..., ge=0, le=1, description="Detection confidence")
-    bounding_box: Union[BoundingBox, None] = Field(None, description="Object location")
+    bounding_box: BoundingBox | None = Field(None, description="Object location")
 
 
 class ImageAnalysis(BaseModel):
@@ -97,7 +96,7 @@ def build_analysis_messages(
         from instructor.multimodal import Image
 
         return cast(
-            list[ChatCompletionMessageParam],
+            "list[ChatCompletionMessageParam]",
             [
                 {"role": "system", "content": SYSTEM_MESSAGE},
                 {
@@ -109,14 +108,13 @@ def build_analysis_messages(
                 },
             ],
         )
-    else:
-        return cast(
-            list[ChatCompletionMessageParam],
-            [
-                {"role": "system", "content": SYSTEM_MESSAGE},
-                {"role": "user", "content": build_provider_message_content(image_url, provider)},
-            ],
-        )
+    return cast(
+        "list[ChatCompletionMessageParam]",
+        [
+            {"role": "system", "content": SYSTEM_MESSAGE},
+            {"role": "user", "content": build_provider_message_content(image_url, provider)},
+        ],
+    )
 
 
 def create_analysis_table(analysis: ImageAnalysis, provider_name: str) -> Table:

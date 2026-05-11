@@ -1613,40 +1613,26 @@ wheels = [
 
 [[package]]
 name = "omniadapters"
-version = "32.0.0"
+version = "33.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "anthropic" },
+    { name = "google-genai" },
+    { name = "instructor" },
     { name = "jsonref" },
+    { name = "openai" },
     { name = "pydantic" },
+    { name = "pydantic-ai-slim", extra = ["anthropic", "google", "openai"] },
     { name = "pydantic-settings" },
 ]
 
 [package.optional-dependencies]
 all = [
-    { name = "anthropic" },
-    { name = "google-genai" },
-    { name = "instructor" },
-    { name = "openai" },
-    { name = "pydantic-ai-slim", extra = ["anthropic", "google", "openai"] },
+    { name = "pydanticonf" },
     { name = "tiktoken" },
-]
-anthropic = [
-    { name = "anthropic" },
-]
-gemini = [
-    { name = "google-genai" },
-]
-openai = [
-    { name = "openai" },
 ]
 playground = [
     { name = "pydanticonf" },
-]
-pydantic-ai = [
-    { name = "pydantic-ai-slim", extra = ["anthropic", "google", "openai"] },
-]
-structify = [
-    { name = "instructor" },
 ]
 token = [
     { name = "tiktoken" },
@@ -1714,24 +1700,20 @@ type = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.72.0,<1.0.0" },
-    { name = "google-genai", marker = "extra == 'gemini'", specifier = ">=1.50.1,<2.0.0" },
-    { name = "instructor", marker = "extra == 'structify'", specifier = ">=1.14.0,<1.15.0" },
+    { name = "anthropic", specifier = ">=0.72.0,<1.0.0" },
+    { name = "google-genai", specifier = ">=1.50.1,<2.0.0" },
+    { name = "instructor", specifier = ">=1.14.0,<1.15.0" },
     { name = "jsonref", specifier = ">=1.1.0,<2.0.0" },
-    { name = "omniadapters", extras = ["anthropic"], marker = "extra == 'all'" },
-    { name = "omniadapters", extras = ["gemini"], marker = "extra == 'all'" },
-    { name = "omniadapters", extras = ["openai"], marker = "extra == 'all'" },
-    { name = "omniadapters", extras = ["pydantic-ai"], marker = "extra == 'all'" },
-    { name = "omniadapters", extras = ["structify"], marker = "extra == 'all'" },
+    { name = "omniadapters", extras = ["playground"], marker = "extra == 'all'" },
     { name = "omniadapters", extras = ["token"], marker = "extra == 'all'" },
-    { name = "openai", marker = "extra == 'openai'", specifier = ">=2.8.0,<3.0.0" },
+    { name = "openai", specifier = ">=2.8.0,<3.0.0" },
     { name = "pydantic", specifier = ">=2.12.0,<3.0.0" },
-    { name = "pydantic-ai-slim", extras = ["anthropic", "google", "openai"], marker = "extra == 'pydantic-ai'", specifier = ">=1.93.0" },
+    { name = "pydantic-ai-slim", extras = ["anthropic", "google", "openai"], specifier = ">=1.93.0" },
     { name = "pydantic-settings", specifier = ">=2.11.0,<3.0.0" },
     { name = "pydanticonf", marker = "extra == 'playground'", specifier = ">=1.0.0" },
     { name = "tiktoken", marker = "extra == 'token'", specifier = ">=0.12.0" },
 ]
-provides-extras = ["token", "openai", "anthropic", "gemini", "structify", "pydantic-ai", "all", "playground"]
+provides-extras = ["token", "playground", "all"]
 
 [package.metadata.requires-dev]
 dev = [

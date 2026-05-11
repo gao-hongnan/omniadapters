@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omniadapters"
-version = "30.0.0"
+version = "32.0.0"
 description = "A collection of code for omniadapters - unified interfaces for LLM providers."
 authors = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
 maintainers = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
@@ -39,8 +39,6 @@ dependencies = [
     "pydantic>=2.12.0,<3.0.0",
     "pydantic-settings>=2.11.0,<3.0.0",
     "jsonref>=1.1.0,<2.0.0",
-    "instructor>=1.14.0,<1.15.0",
-    "pydantic-ai>=1.93.0",
 ]
 
 [project.optional-dependencies]
@@ -48,12 +46,14 @@ token = ["tiktoken>=0.12.0"]
 openai = ["openai>=2.8.0,<3.0.0"]
 anthropic = ["anthropic>=0.72.0,<1.0.0"]
 gemini = ["google-genai>=1.50.1,<2.0.0"]
-pydantic-ai = ["pydantic-ai>=1.67.0"]
+structify = ["instructor>=1.14.0,<1.15.0"]
+pydantic-ai = ["pydantic-ai-slim[anthropic,google,openai]>=1.93.0"]
 all = [
     "omniadapters[token]",
     "omniadapters[openai]",
     "omniadapters[anthropic]",
     "omniadapters[gemini]",
+    "omniadapters[structify]",
     "omniadapters[pydantic-ai]",
 ]
 playground = [
@@ -155,9 +155,6 @@ exclude = [
 
 [tool.uv]
 managed = true
-override-dependencies = [
-    "mistralai<2.0.0",
-]
 
 [tool.bandit]
 exclude_dirs = [

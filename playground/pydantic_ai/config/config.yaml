@@ -1,0 +1,30 @@
+x-openai-provider-config: &openai-provider-config
+  provider: openai
+
+x-anthropic-provider-config: &anthropic-provider-config
+  provider: anthropic
+
+# NOTE: omniadapters' GeminiProviderConfig uses provider="gemini" and
+# AzureOpenAIProviderConfig uses provider="azure-openai". pydantic-ai's
+# infer_provider_class expects "google-gla"/"google-vertex" and "azure"
+# respectively, so those two providers do not currently work through the
+# PydanticAIAdapter and are intentionally omitted from this demo.
+
+pydantic_ai_demo:
+  agents:
+    test:
+      provider_config:
+        <<: *openai-provider-config
+        api_key: "sk-test-placeholder"
+      model_name: "test"
+      system_prompt: "You are a test agent."
+    openai_mini:
+      provider_config:
+        <<: *openai-provider-config
+      model_name: "gpt-4o-mini"
+      system_prompt: "You are a concise assistant."
+    anthropic_haiku:
+      provider_config:
+        <<: *anthropic-provider-config
+      model_name: "claude-3-5-haiku-latest"
+      system_prompt: "You are a concise assistant."

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict
 from pydantic_ai.settings import ModelSettings
@@ -9,6 +9,10 @@ from pydantic_settings import SettingsConfigDict
 from pydanticonf.settings import BaseSettingsWithYaml
 
 from omniadapters.core.models import ProviderConfig
+from omniadapters.pydantic_ai import create_adapter
+
+if TYPE_CHECKING:
+    from pydantic_ai import Agent
 
 
 class AgentConfig(BaseModel):
@@ -18,8 +22,15 @@ class AgentConfig(BaseModel):
 
     provider_config: ProviderConfig
     model_name: str
-    system_prompt: str | None = None
+    system_prompt: str = ""
     model_settings: ModelSettings | None = None
+
+    def build_agent(self) -> Agent[None, str]:
+        adapter = create_adapter(provider_config=self.provider_config, model_name=self.model_name)
+        return adapter.create_agent(
+            system_prompt=self.system_prompt,
+            model_settings=self.model_settings,
+        )
 
 
 class PydanticAIDemoConfig(BaseModel):

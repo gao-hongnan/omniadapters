@@ -2,6 +2,8 @@
 
 A thin TypeScript adapter that maps a unified `ProviderConfig` into a [Vercel AI SDK](https://sdk.vercel.ai/) `LanguageModel`. Mirrors the philosophy of the Python `omniadapters/pydantic_ai/` module: don't reinvent the framework, just configure it.
 
+**Targets**: `ai@^6`, `@ai-sdk/*@^3`, `zod@^4`, Node `>=20`.
+
 Supports four providers via the official `@ai-sdk/*` packages:
 
 | Provider       | Underlying package    |
@@ -102,6 +104,19 @@ ANTHROPIC_API_KEY=sk-ant-... npx tsx playground/completion/01-demo.ts --provider
 ```
 
 CLI flags: `--provider {openai|anthropic|gemini|azure-openai|all}`, `--prompt <text>`, `--stream`, `--trace`.
+
+## Migrating from AI SDK v4
+
+If you're porting code that targeted `ai@4`, note these renames in the AI SDK itself (your `adapter.generate(...)` and `adapter.stream(...)` options forward straight to the SDK, so the new names apply):
+
+| AI SDK v4 | AI SDK v5/v6 |
+| --- | --- |
+| `CoreMessage` | `ModelMessage` |
+| `maxTokens` | `maxOutputTokens` |
+| `usage.promptTokens` | `usage.inputTokens` |
+| `usage.completionTokens` | `usage.outputTokens` |
+
+`LanguageModel` is still exported (now an alias over `LanguageModelV2`/`V3`), and `generateText` / `streamText` / `createOpenAI` / `createAnthropic` / `createGoogleGenerativeAI` / `createAzure` keep their call shapes.
 
 ## Why a single adapter (not one per provider)?
 

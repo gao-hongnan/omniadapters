@@ -19,8 +19,10 @@ import {
 type GenerateTextOptions = Parameters<typeof generateText>[0];
 type StreamTextOptions = Parameters<typeof streamText>[0];
 
-export type GenerateOptions = Omit<GenerateTextOptions, "model">;
-export type StreamOptions = Omit<StreamTextOptions, "model">;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+export type GenerateOptions = DistributiveOmit<GenerateTextOptions, "model">;
+export type StreamOptions = DistributiveOmit<StreamTextOptions, "model">;
 
 export type GenerateResult = Awaited<ReturnType<typeof generateText>>;
 export type StreamResult = ReturnType<typeof streamText>;
@@ -29,13 +31,21 @@ type ProviderSettings<C extends ProviderConfig> = Omit<C, "provider">;
 
 function stripDiscriminator<C extends ProviderConfig>(config: C): ProviderSettings<C> {
   const { provider: _provider, ...settings } = config;
-  return settings;
+  return settings as ProviderSettings<C>;
+}
+
+export function isModuleNotFound(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const code = (err as NodeJS.ErrnoException).code;
+  if (code === "ERR_MODULE_NOT_FOUND" || code === "MODULE_NOT_FOUND") return true;
+  return /Cannot find (module|package)/i.test(err.message);
 }
 
 async function importOrFail<T>(specifier: string, errorMessage: string): Promise<T> {
   try {
     return (await import(specifier)) as T;
   } catch (cause) {
+    if (!isModuleNotFound(cause)) throw cause;
     throw new MissingProviderPackageError(errorMessage, { cause });
   }
 }
@@ -91,37 +101,51 @@ async function buildModel(config: ProviderConfig, modelName: string): Promise<La
       return buildGemini(config, modelName);
     case "azure-openai":
       return buildAzureOpenAI(config, modelName);
+    default: {
+      const _exhaustive: never = config;
+      throw new Error(`Unhandled provider config: ${JSON.stringify(_exhaustive)}`);
+    }
   }
 }
 
-async function loadAiSdk(): Promise<typeof import("ai")> {
-  return importOrFail<typeof import("ai")>("ai", AI_SDK_IMPORT_ERROR);
-}
-
 export class VercelAIAdapter<C extends ProviderConfig = ProviderConfig> {
-  private _model: LanguageModel | null = null;
+  private _modelPromise: Promise<LanguageModel> | null = null;
+  private _aiSdkPromise: Promise<typeof import("ai")> | null = null;
 
   constructor(
     public readonly providerConfig: C,
     public readonly modelName: string,
   ) {}
 
-  async model(): Promise<LanguageModel> {
-    if (this._model === null) {
-      this._model = await buildModel(this.providerConfig, this.modelName);
+  model(): Promise<LanguageModel> {
+    if (this._modelPromise === null) {
+      this._modelPromise = buildModel(this.providerConfig, this.modelName).catch((err) => {
+        this._modelPromise = null;
+        throw err;
+      });
     }
-    return this._model;
+    return this._modelPromise;
+  }
+
+  private loadAiSdk(): Promise<typeof import("ai")> {
+    if (this._aiSdkPromise === null) {
+      this._aiSdkPromise = importOrFail<typeof import("ai")>("ai", AI_SDK_IMPORT_ERROR).catch(
+        (err) => {
+          this._aiSdkPromise = null;
+          throw err;
+        },
+      );
+    }
+    return this._aiSdkPromise;
   }
 
   async generate(options: GenerateOptions): Promise<GenerateResult> {
-    const { generateText } = await loadAiSdk();
-    const model = await this.model();
-    return generateText({ ...options, model });
+    const [{ generateText }, model] = await Promise.all([this.loadAiSdk(), this.model()]);
+    return generateText({ ...options, model } as GenerateTextOptions);
   }
 
   async stream(options: StreamOptions): Promise<StreamResult> {
-    const { streamText } = await loadAiSdk();
-    const model = await this.model();
-    return streamText({ ...options, model });
+    const [{ streamText }, model] = await Promise.all([this.loadAiSdk(), this.model()]);
+    return streamText({ ...options, model } as StreamTextOptions);
   }
 }

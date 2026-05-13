@@ -1,0 +1,33 @@
+x-openai-provider-config: &openai-provider-config
+  provider: openai
+
+x-anthropic-provider-config: &anthropic-provider-config
+  provider: anthropic
+
+# NOTE: only `openai` and `anthropic` are supported here; `gemini` and
+# `azure-openai` are rejected by AgentConfig._validate_provider_supported
+# (see playground/pydantic_ai/constants.py:SUPPORTED_PROVIDERS).
+
+pydantic_ai_demo:
+  agents:
+    test:
+      provider_config:
+        <<: *openai-provider-config
+        api_key: "sk-test-placeholder"
+      model_name: "test"
+      system_prompt: "You are a test agent."
+    openai_mini:
+      provider_config:
+        <<: *openai-provider-config
+      model_name: "gpt-4o-mini"
+      system_prompt: "You are a concise assistant."
+      model_settings:
+        temperature: 0.0
+        max_tokens: 500
+    anthropic_haiku:
+      provider_config:
+        <<: *anthropic-provider-config
+      model_name: "claude-3-5-haiku-latest"
+      system_prompt: "You are a concise assistant."
+      model_settings:
+        max_tokens: 200

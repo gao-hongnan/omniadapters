@@ -56,3 +56,38 @@ curl -s -X POST http://127.0.0.1:8000/completions \
 ```
 
 Unknown agent names return HTTP 404.
+
+## Generation params (`model_settings`)
+
+Each agent can declare default generation parameters in YAML using
+pydantic-ai's [`ModelSettings`](https://ai.pydantic.dev/api/settings/) TypedDict
+(cross-provider keys: `temperature`, `max_tokens`, `top_p`, `tool_choice`,
+`thinking`, `service_tier`, …):
+
+```yaml
+openai_mini:
+  provider_config:
+    <<: *openai-provider-config
+  model_name: "gpt-4o-mini"
+  model_settings:
+    temperature: 0.0
+    max_tokens: 500
+```
+
+Callers can override per request — the override is merged on top of the
+agent's defaults via `pydantic_ai.settings.merge_model_settings`, and the
+effective merged settings are echoed back in the response:
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+        "agent":"openai_mini",
+        "prompt":"Say OK.",
+        "model_settings": {"temperature": 0.9, "max_tokens": 50}
+      }'
+# Response includes "model_settings": {"temperature": 0.9, "max_tokens": 50}
+# (request keys win over agent defaults).
+```
+
+Unknown `model_settings` keys are rejected at request validation with HTTP 422.

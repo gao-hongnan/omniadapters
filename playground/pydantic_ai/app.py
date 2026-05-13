@@ -5,22 +5,29 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic_ai import Agent
+from pydantic_ai.settings import ModelSettings, merge_model_settings
 
 from .config.settings import get_settings
 from .service import arun_completion, build_agent_registry
 
 
 class CompletionRequest(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     agent: str
     prompt: str
+    model_settings: ModelSettings | None = None
 
 
 class CompletionResponse(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     agent: str
     model: str
     output: str
+    model_settings: ModelSettings | None = None
 
 
 class AgentInfo(BaseModel):
@@ -68,5 +75,11 @@ async def list_agents(request: Request) -> list[AgentInfo]:
 async def completions(req: CompletionRequest, request: Request) -> CompletionResponse:
     agent = _get_agent(req.agent, request)
     cfg_agent = request.app.state.config.agents[req.agent]
-    output = await arun_completion(agent, req.prompt)
-    return CompletionResponse(agent=req.agent, model=cfg_agent.model_name, output=output)
+    effective_settings = merge_model_settings(cfg_agent.model_settings, req.model_settings)
+    output = await arun_completion(agent, req.prompt, model_settings=effective_settings)
+    return CompletionResponse(
+        agent=req.agent,
+        model=cfg_agent.model_name,
+        output=output,
+        model_settings=effective_settings,
+    )

@@ -3,7 +3,8 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic_ai.settings import ModelSettings
 from pydantic_settings import SettingsConfigDict
 from pydanticonf.settings import BaseSettingsWithYaml
 
@@ -11,9 +12,14 @@ from omniadapters.core.models import ProviderConfig
 
 
 class AgentConfig(BaseModel):
+    # NOTE: arbitrary_types_allowed is needed because ModelSettings carries a
+    # `timeout: float | httpx.Timeout` field that Pydantic cannot auto-schema.
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     provider_config: ProviderConfig
     model_name: str
     system_prompt: str | None = None
+    model_settings: ModelSettings | None = None
 
 
 class PydanticAIDemoConfig(BaseModel):

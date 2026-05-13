@@ -1,0 +1,66 @@
+{
+  "name": "omniadapters",
+  "version": "0.2.0",
+  "description": "Unified provider configuration over the Vercel AI SDK for OpenAI, Anthropic, Google Gemini, and Azure OpenAI.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "demo": "tsx playground/completion/01-demo.ts",
+    "ci": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
+    "prepublishOnly": "pnpm run ci"
+  },
+  "peerDependencies": {
+    "ai": "^6.0.0",
+    "zod": "^4.0.0",
+    "@ai-sdk/openai": "^3.0.0",
+    "@ai-sdk/anthropic": "^3.0.0",
+    "@ai-sdk/google": "^3.0.0",
+    "@ai-sdk/azure": "^3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@ai-sdk/openai": { "optional": true },
+    "@ai-sdk/anthropic": { "optional": true },
+    "@ai-sdk/google": { "optional": true },
+    "@ai-sdk/azure": { "optional": true }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "devDependencies": {
+    "@ai-sdk/anthropic": "^3.0.0",
+    "@ai-sdk/azure": "^3.0.0",
+    "@ai-sdk/google": "^3.0.0",
+    "@ai-sdk/openai": "^3.0.0",
+    "@types/node": "^22.0.0",
+    "ai": "^6.0.0",
+    "oxlint": "^1.64.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0",
+    "zod": "^4.0.0"
+  }
+}

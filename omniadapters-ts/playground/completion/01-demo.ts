@@ -3,17 +3,13 @@
  *
  * Mirrors playground/completion/01_demo.py.
  *
- * Usage:
  *   npx tsx playground/completion/01-demo.ts --provider all
  *   npx tsx playground/completion/01-demo.ts --provider openai
- *   npx tsx playground/completion/01-demo.ts --provider anthropic
- *   npx tsx playground/completion/01-demo.ts --provider gemini
- *   npx tsx playground/completion/01-demo.ts --provider azure-openai
- *   npx tsx playground/completion/01-demo.ts --prompt "Explain quantum computing"
- *   npx tsx playground/completion/01-demo.ts --stream
- *   npx tsx playground/completion/01-demo.ts --provider openai --stream --trace
+ *   npx tsx playground/completion/01-demo.ts --provider anthropic --stream
+ *   npx tsx playground/completion/01-demo.ts --provider gemini --prompt "What is AI?"
+ *   npx tsx playground/completion/01-demo.ts --provider azure-openai --trace
  *
- * Env (loaded from process env; populate via .env or shell):
+ * Env:
  *   OPENAI_API_KEY
  *   ANTHROPIC_API_KEY
  *   GOOGLE_GENERATIVE_AI_API_KEY   (or GEMINI_API_KEY)
@@ -22,39 +18,43 @@
 
 import { parseArgs } from "node:util";
 
-import { createAdapter, type Provider } from "../../src/index";
+import { z } from "zod";
 
-interface Args {
-  provider: Provider | "all";
-  prompt: string;
-  stream: boolean;
-  trace: boolean;
-}
+import {
+  PROVIDERS,
+  type Provider,
+  type ProviderConfig,
+  createAdapter,
+} from "../../src/index";
 
-function parseCliArgs(): Args {
+const CliArgsSchema = z.object({
+  provider: z.union([z.enum(PROVIDERS), z.literal("all")]).default("all"),
+  prompt: z.string().min(1).default("Explain recursion in programming in 2 sentences."),
+  stream: z.boolean().default(false),
+  trace: z.boolean().default(false),
+});
+
+type CliArgs = z.infer<typeof CliArgsSchema>;
+
+function parseCliArgs(): CliArgs {
   const { values } = parseArgs({
     options: {
       provider: { type: "string", default: "all" },
-      prompt: { type: "string", default: "Explain recursion in programming in 2 sentences." },
+      prompt: { type: "string" },
       stream: { type: "boolean", default: false },
       trace: { type: "boolean", default: false },
     },
   });
-  return {
-    provider: values.provider as Args["provider"],
-    prompt: values.prompt as string,
-    stream: Boolean(values.stream),
-    trace: Boolean(values.trace),
-  };
+  return CliArgsSchema.parse(values);
 }
 
 interface ProviderDefaults {
   modelName: string;
   envKey: string;
-  build: (apiKey: string) => Parameters<typeof createAdapter>[0]["providerConfig"];
+  build: (apiKey: string) => ProviderConfig;
 }
 
-const DEFAULTS: Record<Provider, ProviderDefaults> = {
+const DEFAULTS: { [P in Provider]: ProviderDefaults } = {
   openai: {
     modelName: "gpt-4o-mini",
     envKey: "OPENAI_API_KEY",
@@ -81,23 +81,17 @@ const DEFAULTS: Record<Provider, ProviderDefaults> = {
   },
 };
 
-function getDefaults(provider: Provider): ProviderDefaults {
-  const defaults = DEFAULTS[provider];
-  if (!defaults) throw new Error(`No defaults registered for provider: ${provider}`);
-  return defaults;
-}
-
 function readApiKey(provider: Provider): string | null {
-  const envKey = getDefaults(provider).envKey;
+  const defaults = DEFAULTS[provider];
   const fallback = provider === "gemini" ? process.env.GEMINI_API_KEY : undefined;
-  return process.env[envKey] ?? fallback ?? null;
+  return process.env[defaults.envKey] ?? fallback ?? null;
 }
 
 const SYSTEM = "Always start your response with 'Hello, world!'";
 
-async function runOnce(provider: Provider, args: Args): Promise<void> {
+async function runOnce(provider: Provider, args: CliArgs): Promise<void> {
+  const defaults = DEFAULTS[provider];
   const apiKey = readApiKey(provider);
-  const defaults = getDefaults(provider);
   if (!apiKey) {
     console.error(`[${provider}] missing ${defaults.envKey}, skipping`);
     return;
@@ -106,6 +100,7 @@ async function runOnce(provider: Provider, args: Args): Promise<void> {
     console.error(`[${provider}] missing AZURE_OPENAI_RESOURCE_NAME, skipping`);
     return;
   }
+
   const adapter = createAdapter({
     providerConfig: defaults.build(apiKey),
     modelName: defaults.modelName,
@@ -114,37 +109,28 @@ async function runOnce(provider: Provider, args: Args): Promise<void> {
   console.log(`\n=== ${provider} (${defaults.modelName}) ===`);
 
   if (args.stream) {
-    const result = await adapter.stream({
-      system: SYSTEM,
-      prompt: args.prompt,
-    });
-    let chunkCount = 0;
+    const result = await adapter.stream({ system: SYSTEM, prompt: args.prompt });
+    let chunks = 0;
     for await (const chunk of result.textStream) {
       process.stdout.write(chunk);
-      chunkCount += 1;
+      chunks += 1;
     }
-    const finalUsage = await result.usage;
-    console.log(`\n\n[chunks=${chunkCount}, usage=${JSON.stringify(finalUsage)}]`);
-  } else {
-    const result = await adapter.generate({
-      system: SYSTEM,
-      prompt: args.prompt,
-    });
-    console.log(result.text);
-    console.log(`\n[model=${defaults.modelName}, usage=${JSON.stringify(result.usage)}]`);
-    if (args.trace) {
-      console.log("\n--- trace ---");
-      console.log(JSON.stringify({ finishReason: result.finishReason, usage: result.usage }, null, 2));
-    }
+    console.log(`\n\n[chunks=${chunks}, usage=${JSON.stringify(await result.usage)}]`);
+    return;
+  }
+
+  const result = await adapter.generate({ system: SYSTEM, prompt: args.prompt });
+  console.log(result.text);
+  console.log(`\n[model=${defaults.modelName}, usage=${JSON.stringify(result.usage)}]`);
+  if (args.trace) {
+    console.log("--- trace ---");
+    console.log(JSON.stringify({ finishReason: result.finishReason, usage: result.usage }, null, 2));
   }
 }
 
 async function main(): Promise<void> {
   const args = parseCliArgs();
-  const providers: Provider[] =
-    args.provider === "all"
-      ? (["openai", "anthropic", "gemini", "azure-openai"] as const).slice()
-      : [args.provider];
+  const providers: Provider[] = args.provider === "all" ? [...PROVIDERS] : [args.provider];
 
   console.log(`Prompt: ${args.prompt}`);
   for (const provider of providers) {

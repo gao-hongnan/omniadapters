@@ -1,104 +1,101 @@
-import type {
-  CoreMessage,
-  GenerateTextResult,
-  LanguageModel,
-  StreamTextResult,
-  generateText,
-  streamText,
-} from "ai";
+import type { generateText, LanguageModel, streamText } from "ai";
 
-import type { ProviderConfig } from "./core/config";
+import type {
+  AnthropicProviderConfig,
+  AzureOpenAIProviderConfig,
+  GeminiProviderConfig,
+  OpenAIProviderConfig,
+  ProviderConfig,
+} from "./core/config";
 import {
+  AI_SDK_IMPORT_ERROR,
   ANTHROPIC_IMPORT_ERROR,
   AZURE_OPENAI_IMPORT_ERROR,
-  AI_SDK_IMPORT_ERROR,
   GEMINI_IMPORT_ERROR,
   MissingProviderPackageError,
   OPENAI_IMPORT_ERROR,
 } from "./core/errors";
 
-type GenerateTextParams = Parameters<typeof generateText>[0];
-type StreamTextParams = Parameters<typeof streamText>[0];
+type GenerateTextOptions = Parameters<typeof generateText>[0];
+type StreamTextOptions = Parameters<typeof streamText>[0];
 
-export type GenerateOptions = Omit<GenerateTextParams, "model">;
-export type StreamOptions = Omit<StreamTextParams, "model">;
+export type GenerateOptions = Omit<GenerateTextOptions, "model">;
+export type StreamOptions = Omit<StreamTextOptions, "model">;
 
-async function loadAiSdk(): Promise<{
-  generateText: typeof generateText;
-  streamText: typeof streamText;
-}> {
+export type GenerateResult = Awaited<ReturnType<typeof generateText>>;
+export type StreamResult = ReturnType<typeof streamText>;
+
+type ProviderSettings<C extends ProviderConfig> = Omit<C, "provider">;
+
+function stripDiscriminator<C extends ProviderConfig>(config: C): ProviderSettings<C> {
+  const { provider: _provider, ...settings } = config;
+  return settings;
+}
+
+async function importOrFail<T>(specifier: string, errorMessage: string): Promise<T> {
   try {
-    const mod = await import("ai");
-    return { generateText: mod.generateText, streamText: mod.streamText };
-  } catch (err) {
-    throw new MissingProviderPackageError(AI_SDK_IMPORT_ERROR, err);
+    return (await import(specifier)) as T;
+  } catch (cause) {
+    throw new MissingProviderPackageError(errorMessage, { cause });
   }
 }
 
-async function buildOpenAIModel(
-  config: Extract<ProviderConfig, { provider: "openai" }>,
-  modelName: string,
-): Promise<LanguageModel> {
-  let createOpenAI: (settings: Record<string, unknown>) => (id: string) => LanguageModel;
-  try {
-    ({ createOpenAI } = (await import("@ai-sdk/openai")) as {
-      createOpenAI: typeof createOpenAI;
-    });
-  } catch (err) {
-    throw new MissingProviderPackageError(OPENAI_IMPORT_ERROR, err);
-  }
-  const { provider: _provider, ...settings } = config;
-  return createOpenAI(settings)(modelName);
+async function buildOpenAI(config: OpenAIProviderConfig, modelName: string): Promise<LanguageModel> {
+  const { createOpenAI } = await importOrFail<typeof import("@ai-sdk/openai")>(
+    "@ai-sdk/openai",
+    OPENAI_IMPORT_ERROR,
+  );
+  return createOpenAI(stripDiscriminator(config))(modelName);
 }
 
-async function buildAnthropicModel(
-  config: Extract<ProviderConfig, { provider: "anthropic" }>,
+async function buildAnthropic(
+  config: AnthropicProviderConfig,
   modelName: string,
 ): Promise<LanguageModel> {
-  let createAnthropic: (settings: Record<string, unknown>) => (id: string) => LanguageModel;
-  try {
-    ({ createAnthropic } = (await import("@ai-sdk/anthropic")) as {
-      createAnthropic: typeof createAnthropic;
-    });
-  } catch (err) {
-    throw new MissingProviderPackageError(ANTHROPIC_IMPORT_ERROR, err);
-  }
-  const { provider: _provider, ...settings } = config;
-  return createAnthropic(settings)(modelName);
+  const { createAnthropic } = await importOrFail<typeof import("@ai-sdk/anthropic")>(
+    "@ai-sdk/anthropic",
+    ANTHROPIC_IMPORT_ERROR,
+  );
+  return createAnthropic(stripDiscriminator(config))(modelName);
 }
 
-async function buildGeminiModel(
-  config: Extract<ProviderConfig, { provider: "gemini" }>,
+async function buildGemini(
+  config: GeminiProviderConfig,
   modelName: string,
 ): Promise<LanguageModel> {
-  let createGoogleGenerativeAI: (
-    settings: Record<string, unknown>,
-  ) => (id: string) => LanguageModel;
-  try {
-    ({ createGoogleGenerativeAI } = (await import("@ai-sdk/google")) as {
-      createGoogleGenerativeAI: typeof createGoogleGenerativeAI;
-    });
-  } catch (err) {
-    throw new MissingProviderPackageError(GEMINI_IMPORT_ERROR, err);
-  }
-  const { provider: _provider, ...settings } = config;
-  return createGoogleGenerativeAI(settings)(modelName);
+  const { createGoogleGenerativeAI } = await importOrFail<typeof import("@ai-sdk/google")>(
+    "@ai-sdk/google",
+    GEMINI_IMPORT_ERROR,
+  );
+  return createGoogleGenerativeAI(stripDiscriminator(config))(modelName);
 }
 
-async function buildAzureOpenAIModel(
-  config: Extract<ProviderConfig, { provider: "azure-openai" }>,
+async function buildAzureOpenAI(
+  config: AzureOpenAIProviderConfig,
   modelName: string,
 ): Promise<LanguageModel> {
-  let createAzure: (settings: Record<string, unknown>) => (id: string) => LanguageModel;
-  try {
-    ({ createAzure } = (await import("@ai-sdk/azure")) as {
-      createAzure: typeof createAzure;
-    });
-  } catch (err) {
-    throw new MissingProviderPackageError(AZURE_OPENAI_IMPORT_ERROR, err);
+  const { createAzure } = await importOrFail<typeof import("@ai-sdk/azure")>(
+    "@ai-sdk/azure",
+    AZURE_OPENAI_IMPORT_ERROR,
+  );
+  return createAzure(stripDiscriminator(config))(modelName);
+}
+
+async function buildModel(config: ProviderConfig, modelName: string): Promise<LanguageModel> {
+  switch (config.provider) {
+    case "openai":
+      return buildOpenAI(config, modelName);
+    case "anthropic":
+      return buildAnthropic(config, modelName);
+    case "gemini":
+      return buildGemini(config, modelName);
+    case "azure-openai":
+      return buildAzureOpenAI(config, modelName);
   }
-  const { provider: _provider, ...settings } = config;
-  return createAzure(settings)(modelName);
+}
+
+async function loadAiSdk(): Promise<typeof import("ai")> {
+  return importOrFail<typeof import("ai")>("ai", AI_SDK_IMPORT_ERROR);
 }
 
 export class VercelAIAdapter<C extends ProviderConfig = ProviderConfig> {
@@ -110,62 +107,21 @@ export class VercelAIAdapter<C extends ProviderConfig = ProviderConfig> {
   ) {}
 
   async model(): Promise<LanguageModel> {
-    if (this._model !== null) return this._model;
-
-    const config = this.providerConfig as ProviderConfig;
-    switch (config.provider) {
-      case "openai":
-        this._model = await buildOpenAIModel(config, this.modelName);
-        break;
-      case "anthropic":
-        this._model = await buildAnthropicModel(config, this.modelName);
-        break;
-      case "gemini":
-        this._model = await buildGeminiModel(config, this.modelName);
-        break;
-      case "azure-openai":
-        this._model = await buildAzureOpenAIModel(config, this.modelName);
-        break;
-      default: {
-        const _exhaustive: never = config;
-        throw new Error(`Unknown provider in config: ${JSON.stringify(_exhaustive)}`);
-      }
+    if (this._model === null) {
+      this._model = await buildModel(this.providerConfig, this.modelName);
     }
     return this._model;
   }
 
-  async generate(
-    messagesOrOptions: CoreMessage[] | GenerateOptions,
-    options?: GenerateOptions,
-  ): Promise<GenerateTextResult<Record<string, never>, never>> {
+  async generate(options: GenerateOptions): Promise<GenerateResult> {
     const { generateText } = await loadAiSdk();
     const model = await this.model();
-    const params = normalizeOptions(messagesOrOptions, options);
-    return generateText({ model, ...params } as GenerateTextParams) as Promise<
-      GenerateTextResult<Record<string, never>, never>
-    >;
+    return generateText({ ...options, model });
   }
 
-  async stream(
-    messagesOrOptions: CoreMessage[] | StreamOptions,
-    options?: StreamOptions,
-  ): Promise<StreamTextResult<Record<string, never>, never>> {
+  async stream(options: StreamOptions): Promise<StreamResult> {
     const { streamText } = await loadAiSdk();
     const model = await this.model();
-    const params = normalizeOptions(messagesOrOptions, options);
-    return streamText({ model, ...params } as StreamTextParams) as StreamTextResult<
-      Record<string, never>,
-      never
-    >;
+    return streamText({ ...options, model });
   }
-}
-
-function normalizeOptions<O extends GenerateOptions | StreamOptions>(
-  messagesOrOptions: CoreMessage[] | O,
-  options: O | undefined,
-): O {
-  if (Array.isArray(messagesOrOptions)) {
-    return { messages: messagesOrOptions, ...(options ?? {}) } as O;
-  }
-  return messagesOrOptions;
 }

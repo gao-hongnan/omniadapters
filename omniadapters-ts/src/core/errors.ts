@@ -14,11 +14,8 @@ export const AI_SDK_IMPORT_ERROR =
   "Vercel AI SDK is required. Install with: `npm install ai`";
 
 export class MissingProviderPackageError extends Error {
-  override readonly cause?: unknown;
-
-  constructor(message: string, cause?: unknown) {
-    super(message);
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
     this.name = "MissingProviderPackageError";
-    this.cause = cause;
   }
 }

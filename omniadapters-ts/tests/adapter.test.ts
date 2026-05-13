@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AnthropicProviderConfigSchema,
@@ -6,51 +6,64 @@ import {
   GeminiProviderConfigSchema,
   OpenAIProviderConfigSchema,
   PROVIDERS,
+  PROVIDER_SCHEMAS,
   ProviderConfigSchema,
   VercelAIAdapter,
   createAdapter,
+  isProviderConfig,
+  parseProviderConfig,
+  safeParseProviderConfig,
 } from "../src/index";
 
-describe("ProviderConfig schemas", () => {
+type ModelFactory = (id: string) => unknown;
+type ProviderFactory = (settings: Record<string, unknown>) => ModelFactory;
+
+function mockProviderFactory(name: string): {
+  sentinel: symbol;
+  modelFactory: ReturnType<typeof vi.fn<ModelFactory>>;
+  providerFactory: ReturnType<typeof vi.fn<ProviderFactory>>;
+} {
+  const sentinel = Symbol(name);
+  const modelFactory = vi.fn<ModelFactory>(() => sentinel);
+  const providerFactory = vi.fn<ProviderFactory>(() => modelFactory);
+  return { sentinel, modelFactory, providerFactory };
+}
+
+beforeEach(() => {
+  vi.resetModules();
+  vi.unstubAllEnvs();
+});
+
+describe("Provider config zod schemas", () => {
   it("accepts a valid OpenAI config", () => {
     const parsed = OpenAIProviderConfigSchema.parse({
       provider: "openai",
       apiKey: "sk-test",
+      organization: "org-x",
     });
-    expect(parsed.provider).toBe("openai");
-    expect(parsed.apiKey).toBe("sk-test");
+    expect(parsed).toMatchObject({ provider: "openai", apiKey: "sk-test", organization: "org-x" });
   });
 
   it("accepts a valid Anthropic config", () => {
-    const parsed = AnthropicProviderConfigSchema.parse({
-      provider: "anthropic",
-      apiKey: "sk-ant-test",
-    });
+    const parsed = AnthropicProviderConfigSchema.parse({ provider: "anthropic", apiKey: "sk-ant" });
     expect(parsed.provider).toBe("anthropic");
   });
 
   it("accepts a valid Gemini config", () => {
-    const parsed = GeminiProviderConfigSchema.parse({
-      provider: "gemini",
-      apiKey: "ya29.test",
-    });
+    const parsed = GeminiProviderConfigSchema.parse({ provider: "gemini", apiKey: "ya29" });
     expect(parsed.provider).toBe("gemini");
   });
 
   it("requires resourceName for azure-openai", () => {
     expect(() =>
-      AzureOpenAIProviderConfigSchema.parse({
-        provider: "azure-openai",
-        apiKey: "az-test",
-      }),
+      AzureOpenAIProviderConfigSchema.parse({ provider: "azure-openai", apiKey: "az" }),
     ).toThrow();
-
     const parsed = AzureOpenAIProviderConfigSchema.parse({
       provider: "azure-openai",
-      apiKey: "az-test",
-      resourceName: "my-resource",
+      apiKey: "az",
+      resourceName: "res",
     });
-    expect(parsed.resourceName).toBe("my-resource");
+    expect(parsed.resourceName).toBe("res");
   });
 
   it("rejects empty apiKey", () => {
@@ -58,18 +71,58 @@ describe("ProviderConfig schemas", () => {
   });
 
   it("rejects unknown provider via discriminated union", () => {
-    expect(() =>
-      ProviderConfigSchema.parse({ provider: "cohere", apiKey: "k" } as unknown),
-    ).toThrow();
+    expect(() => ProviderConfigSchema.parse({ provider: "cohere", apiKey: "k" })).toThrow();
+  });
+
+  it("keeps passthrough fields (Python `extra=allow` parity)", () => {
+    const parsed = OpenAIProviderConfigSchema.parse({
+      provider: "openai",
+      apiKey: "sk-test",
+      headers: { "x-custom": "1" },
+    });
+    expect((parsed as { headers?: unknown }).headers).toEqual({ "x-custom": "1" });
   });
 
   it("exposes all four supported providers", () => {
     expect([...PROVIDERS].sort()).toEqual(["anthropic", "azure-openai", "gemini", "openai"]);
   });
+
+  it("PROVIDER_SCHEMAS maps each provider to its schema", () => {
+    expect(PROVIDER_SCHEMAS.openai).toBe(OpenAIProviderConfigSchema);
+    expect(PROVIDER_SCHEMAS.anthropic).toBe(AnthropicProviderConfigSchema);
+    expect(PROVIDER_SCHEMAS.gemini).toBe(GeminiProviderConfigSchema);
+    expect(PROVIDER_SCHEMAS["azure-openai"]).toBe(AzureOpenAIProviderConfigSchema);
+  });
+});
+
+describe("zod helpers", () => {
+  it("parseProviderConfig throws on invalid input", () => {
+    expect(() => parseProviderConfig({ provider: "openai" })).toThrow();
+  });
+
+  it("safeParseProviderConfig returns a SafeParseReturnType", () => {
+    const ok = safeParseProviderConfig({ provider: "openai", apiKey: "k" });
+    expect(ok.success).toBe(true);
+    if (ok.success) expect(ok.data.provider).toBe("openai");
+
+    const bad = safeParseProviderConfig({ provider: "openai", apiKey: "" });
+    expect(bad.success).toBe(false);
+    if (!bad.success) expect(bad.error.issues.length).toBeGreaterThan(0);
+  });
+
+  it("isProviderConfig narrows the type", () => {
+    const candidate: unknown = { provider: "gemini", apiKey: "k" };
+    if (isProviderConfig(candidate)) {
+      expect(candidate.provider).toBe("gemini");
+    } else {
+      throw new Error("expected isProviderConfig to be true");
+    }
+    expect(isProviderConfig({ provider: "x" })).toBe(false);
+  });
 });
 
 describe("createAdapter factory", () => {
-  it("returns a VercelAIAdapter instance with correct config", () => {
+  it("returns a VercelAIAdapter with the correct narrowed config", () => {
     const adapter = createAdapter({
       providerConfig: { provider: "openai", apiKey: "sk-test" },
       modelName: "gpt-4o-mini",
@@ -79,7 +132,7 @@ describe("createAdapter factory", () => {
     expect(adapter.providerConfig.provider).toBe("openai");
   });
 
-  it("validates by default", () => {
+  it("validates by default via zod", () => {
     expect(() =>
       createAdapter({
         providerConfig: { provider: "openai", apiKey: "" } as never,
@@ -97,36 +150,29 @@ describe("createAdapter factory", () => {
     expect(adapter.providerConfig.apiKey).toBe("anything");
   });
 
-  it("accepts each of the four providers", () => {
-    const openai = createAdapter({
-      providerConfig: { provider: "openai", apiKey: "k" },
-      modelName: "m",
-    });
-    const anthropic = createAdapter({
-      providerConfig: { provider: "anthropic", apiKey: "k" },
-      modelName: "m",
-    });
-    const gemini = createAdapter({
-      providerConfig: { provider: "gemini", apiKey: "k" },
-      modelName: "m",
-    });
-    const azure = createAdapter({
-      providerConfig: { provider: "azure-openai", apiKey: "k", resourceName: "r" },
-      modelName: "m",
-    });
-    expect(openai.providerConfig.provider).toBe("openai");
-    expect(anthropic.providerConfig.provider).toBe("anthropic");
-    expect(gemini.providerConfig.provider).toBe("gemini");
-    expect(azure.providerConfig.provider).toBe("azure-openai");
+  it("accepts each of the four supported providers", () => {
+    const built = [
+      createAdapter({ providerConfig: { provider: "openai", apiKey: "k" }, modelName: "m" }),
+      createAdapter({ providerConfig: { provider: "anthropic", apiKey: "k" }, modelName: "m" }),
+      createAdapter({ providerConfig: { provider: "gemini", apiKey: "k" }, modelName: "m" }),
+      createAdapter({
+        providerConfig: { provider: "azure-openai", apiKey: "k", resourceName: "r" },
+        modelName: "m",
+      }),
+    ];
+    expect(built.map((a) => a.providerConfig.provider)).toEqual([
+      "openai",
+      "anthropic",
+      "gemini",
+      "azure-openai",
+    ]);
   });
 });
 
 describe("VercelAIAdapter.model() dispatches by provider", () => {
-  it("calls createOpenAI with the provider settings (excluding the discriminator)", async () => {
-    const sentinel = Symbol("openai-model");
-    const factory = vi.fn<(id: string) => unknown>(() => sentinel);
-    const createOpenAI = vi.fn<(settings: Record<string, unknown>) => typeof factory>(() => factory);
-    vi.doMock("@ai-sdk/openai", () => ({ createOpenAI }));
+  it("calls createOpenAI with settings stripped of the discriminator", async () => {
+    const { sentinel, modelFactory, providerFactory } = mockProviderFactory("openai-model");
+    vi.doMock("@ai-sdk/openai", () => ({ createOpenAI: providerFactory }));
 
     const { VercelAIAdapter: Adapter } = await import("../src/adapter");
     const adapter = new Adapter(
@@ -135,55 +181,78 @@ describe("VercelAIAdapter.model() dispatches by provider", () => {
     );
     const model = await adapter.model();
 
-    expect(createOpenAI).toHaveBeenCalledTimes(1);
-    const settings = createOpenAI.mock.calls[0]?.[0];
-    expect(settings).toMatchObject({ apiKey: "sk-test", organization: "org-x" });
-    expect(settings?.provider).toBeUndefined();
-    expect(factory).toHaveBeenCalledWith("gpt-4o-mini");
+    expect(providerFactory).toHaveBeenCalledTimes(1);
+    const settings = providerFactory.mock.calls[0]?.[0];
+    expect(settings).toEqual({ apiKey: "sk-test", organization: "org-x" });
+    expect(settings).not.toHaveProperty("provider");
+    expect(modelFactory).toHaveBeenCalledWith("gpt-4o-mini");
     expect(model).toBe(sentinel);
 
     vi.doUnmock("@ai-sdk/openai");
-    vi.resetModules();
   });
 
-  it("calls createAzure for azure-openai", async () => {
-    const sentinel = Symbol("azure-model");
-    const factory = vi.fn<(id: string) => unknown>(() => sentinel);
-    const createAzure = vi.fn<(settings: Record<string, unknown>) => typeof factory>(() => factory);
-    vi.doMock("@ai-sdk/azure", () => ({ createAzure }));
+  it("calls createAnthropic for anthropic configs", async () => {
+    const { sentinel, providerFactory } = mockProviderFactory("anthropic-model");
+    vi.doMock("@ai-sdk/anthropic", () => ({ createAnthropic: providerFactory }));
+
+    const { VercelAIAdapter: Adapter } = await import("../src/adapter");
+    const adapter = new Adapter({ provider: "anthropic", apiKey: "sk-ant" }, "claude-3");
+    expect(await adapter.model()).toBe(sentinel);
+    expect(providerFactory.mock.calls[0]?.[0]).toEqual({ apiKey: "sk-ant" });
+
+    vi.doUnmock("@ai-sdk/anthropic");
+  });
+
+  it("calls createGoogleGenerativeAI for gemini configs", async () => {
+    const { sentinel, providerFactory } = mockProviderFactory("gemini-model");
+    vi.doMock("@ai-sdk/google", () => ({ createGoogleGenerativeAI: providerFactory }));
+
+    const { VercelAIAdapter: Adapter } = await import("../src/adapter");
+    const adapter = new Adapter({ provider: "gemini", apiKey: "ya29" }, "gemini-2.0");
+    expect(await adapter.model()).toBe(sentinel);
+
+    vi.doUnmock("@ai-sdk/google");
+  });
+
+  it("calls createAzure for azure-openai configs", async () => {
+    const { sentinel, providerFactory } = mockProviderFactory("azure-model");
+    vi.doMock("@ai-sdk/azure", () => ({ createAzure: providerFactory }));
 
     const { VercelAIAdapter: Adapter } = await import("../src/adapter");
     const adapter = new Adapter(
       { provider: "azure-openai", apiKey: "az", resourceName: "res" },
       "gpt-4o-mini",
     );
-    const model = await adapter.model();
-
-    expect(createAzure).toHaveBeenCalledTimes(1);
-    const settings = createAzure.mock.calls[0]?.[0];
-    expect(settings).toMatchObject({ apiKey: "az", resourceName: "res" });
-    expect(settings?.provider).toBeUndefined();
-    expect(model).toBe(sentinel);
+    expect(await adapter.model()).toBe(sentinel);
+    expect(providerFactory.mock.calls[0]?.[0]).toEqual({ apiKey: "az", resourceName: "res" });
 
     vi.doUnmock("@ai-sdk/azure");
-    vi.resetModules();
   });
 
   it("memoizes the model across calls", async () => {
-    const sentinel = Symbol("openai-model");
-    const factory = vi.fn<(id: string) => unknown>(() => sentinel);
-    const createOpenAI = vi.fn<(settings: Record<string, unknown>) => typeof factory>(() => factory);
-    vi.doMock("@ai-sdk/openai", () => ({ createOpenAI }));
+    const { providerFactory } = mockProviderFactory("openai-model");
+    vi.doMock("@ai-sdk/openai", () => ({ createOpenAI: providerFactory }));
 
     const { VercelAIAdapter: Adapter } = await import("../src/adapter");
     const adapter = new Adapter({ provider: "openai", apiKey: "sk-test" }, "gpt-4o-mini");
     const a = await adapter.model();
     const b = await adapter.model();
-
     expect(a).toBe(b);
-    expect(createOpenAI).toHaveBeenCalledTimes(1);
+    expect(providerFactory).toHaveBeenCalledTimes(1);
 
     vi.doUnmock("@ai-sdk/openai");
-    vi.resetModules();
+  });
+
+  it("wraps a missing provider package in MissingProviderPackageError", async () => {
+    vi.doMock("@ai-sdk/openai", () => {
+      throw new Error("Cannot find module '@ai-sdk/openai'");
+    });
+
+    const { VercelAIAdapter: Adapter } = await import("../src/adapter");
+    const { MissingProviderPackageError: ErrorCtor } = await import("../src/core/errors");
+    const adapter = new Adapter({ provider: "openai", apiKey: "sk" }, "gpt-4o-mini");
+    await expect(adapter.model()).rejects.toBeInstanceOf(ErrorCtor);
+
+    vi.doUnmock("@ai-sdk/openai");
   });
 });

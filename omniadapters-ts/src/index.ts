@@ -1,5 +1,10 @@
 export { VercelAIAdapter } from "./adapter";
-export type { GenerateOptions, StreamOptions } from "./adapter";
+export type {
+  GenerateOptions,
+  GenerateResult,
+  StreamOptions,
+  StreamResult,
+} from "./adapter";
 
 export { createAdapter } from "./factory";
 export type { CreateAdapterArgs } from "./factory";
@@ -9,8 +14,13 @@ export {
   AzureOpenAIProviderConfigSchema,
   GeminiProviderConfigSchema,
   OpenAIProviderConfigSchema,
+  PROVIDER_SCHEMAS,
   PROVIDERS,
   ProviderConfigSchema,
+  ProviderSchema,
+  isProviderConfig,
+  parseProviderConfig,
+  safeParseProviderConfig,
 } from "./core/config";
 export type {
   AnthropicProviderConfig,

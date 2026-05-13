@@ -4,11 +4,9 @@ x-openai-provider-config: &openai-provider-config
 x-anthropic-provider-config: &anthropic-provider-config
   provider: anthropic
 
-# NOTE: omniadapters' GeminiProviderConfig uses provider="gemini" and
-# AzureOpenAIProviderConfig uses provider="azure-openai". pydantic-ai's
-# infer_provider_class expects "google-gla"/"google-vertex" and "azure"
-# respectively, so those two providers do not currently work through the
-# PydanticAIAdapter and are intentionally omitted from this demo.
+# NOTE: only `openai` and `anthropic` are supported here; `gemini` and
+# `azure-openai` are rejected by AgentConfig._validate_provider_supported
+# (see playground/pydantic_ai/constants.py:SUPPORTED_PROVIDERS).
 
 pydantic_ai_demo:
   agents:

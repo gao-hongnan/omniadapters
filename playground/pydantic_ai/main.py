@@ -5,6 +5,8 @@ import os
 
 import uvicorn
 
+from .constants import ENV_FILE_VAR, YAML_FILE_VAR
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the config-driven pydantic-ai FastAPI demo")
@@ -15,8 +17,8 @@ def main() -> None:
     parser.add_argument("--reload", action="store_true")
     args = parser.parse_args()
 
-    os.environ["PYDANTIC_AI_DEMO_ENV_FILE"] = args.env_file
-    os.environ["PYDANTIC_AI_DEMO_YAML_FILE"] = args.yaml_file
+    os.environ[ENV_FILE_VAR] = args.env_file
+    os.environ[YAML_FILE_VAR] = args.yaml_file
 
     uvicorn.run(
         "playground.pydantic_ai.app:app",

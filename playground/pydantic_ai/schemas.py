@@ -5,20 +5,20 @@ from pydantic_ai.settings import ModelSettings
 
 
 class CompletionRequest(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
     agent: str
     prompt: str
     model_settings: ModelSettings | None = None
 
-
-class CompletionResponse(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+
+class CompletionResponse(BaseModel):
     agent: str
     model: str
     output: str
     model_settings: ModelSettings | None = None
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class AgentInfo(BaseModel):

@@ -20,11 +20,13 @@ The `test` agent uses pydantic-ai's built-in `TestModel` and works with no real 
 
 ### Provider support
 
-This demo includes `openai`, `anthropic`, and the built-in `test` provider.
-`gemini` and `azure-openai` are intentionally omitted: omniadapters' provider
-names (`gemini`, `azure-openai`) do not match the names pydantic-ai's
-`infer_provider_class` expects (`google-gla`/`google-vertex`, `azure`), so they
-fail to instantiate through `PydanticAIAdapter` today.
+This demo supports `openai` and `anthropic` (plus the built-in `test` agent
+for credential-free smoke tests). `gemini` and `azure-openai` are rejected at
+config-load time by `AgentConfig._validate_provider_supported`: omniadapters'
+provider names (`gemini`, `azure-openai`) do not match the names pydantic-ai's
+`infer_provider_class` expects (`google-gla`/`google-vertex`, `azure`), so
+they cannot currently be wired through `PydanticAIAdapter`. Adding one to
+`config.yaml` raises a clear `ValueError` listing the supported providers.
 
 ## Run
 
@@ -90,4 +92,5 @@ curl -s -X POST http://127.0.0.1:8000/completions \
 # (request keys win over agent defaults).
 ```
 
-Unknown `model_settings` keys are rejected at request validation with HTTP 422.
+Unknown `model_settings` keys are silently stripped by Pydantic (TypedDict
+`total=False` semantics) — pass only valid `ModelSettings` keys.

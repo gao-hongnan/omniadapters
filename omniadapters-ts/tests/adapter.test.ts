@@ -84,7 +84,7 @@ describe("Provider config zod schemas", () => {
   });
 
   it("exposes all four supported providers", () => {
-    expect([...PROVIDERS].sort()).toEqual(["anthropic", "azure-openai", "gemini", "openai"]);
+    expect(PROVIDERS.toSorted()).toEqual(["anthropic", "azure-openai", "gemini", "openai"]);
   });
 
   it("PROVIDER_SCHEMAS maps each provider to its schema", () => {

@@ -4,6 +4,8 @@ A thin TypeScript adapter that maps a unified `ProviderConfig` into a [Vercel AI
 
 **Targets**: `ai@^6`, `@ai-sdk/*@^3`, `zod@^4`, Node `>=20`.
 
+**Toolchain**: pnpm (package manager) · oxlint (Rust-based lint, the ruff-equivalent) · tsc (type-check) · vitest (test) · tsup (build).
+
 Supports four providers via the official `@ai-sdk/*` packages:
 
 | Provider       | Underlying package    |
@@ -95,6 +97,21 @@ const { object } = await generateObject({
 ```
 
 Validation is enforced by `zod` at `createAdapter` call time. Pass `validate: false` to skip.
+
+## Development
+
+```bash
+# pnpm is the package manager (corepack-managed via the `packageManager` field).
+# If you don't have pnpm: `corepack enable` or `npm i -g pnpm`.
+cd omniadapters-ts
+pnpm install --frozen-lockfile
+
+pnpm run lint        # oxlint
+pnpm run typecheck   # tsc --noEmit
+pnpm run test        # vitest
+pnpm run build       # tsup (ESM + CJS + .d.ts)
+pnpm run ci          # all four, sequenced
+```
 
 ## Playground
 

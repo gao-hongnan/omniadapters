@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
 from omniadapters.core.models import (
     AnthropicCompletionClientParams,
@@ -17,6 +18,7 @@ from omniadapters.structify import create_adapter
 
 if TYPE_CHECKING:
     from openai.types.chat import ChatCompletionMessageParam
+    from rich.console import Console
 
     from omniadapters.structify.adapters.anthropic import AnthropicAdapter
     from omniadapters.structify.adapters.gemini import GeminiAdapter
@@ -55,11 +57,24 @@ class CoVeCandidate(BaseModel):
 
 class CoVeOrchestrator(MaybeOrchestrator[CoVeVerifierConfig, CoVeCandidate]):
     config: CoVeVerifierConfig
-    _prompt_renderer: JinjaPromptRenderer
+    _prompt_renderer: JinjaPromptRenderer = PrivateAttr()
+    _console: Console | None = PrivateAttr(default=None)
+    _question_label: str = PrivateAttr(default="Question")
 
-    def __init__(self, config: CoVeVerifierConfig) -> None:
+    def __init__(
+        self,
+        config: CoVeVerifierConfig,
+        console: Console | None = None,
+        question_label: str = "Question",
+    ) -> None:
         super().__init__(config=config)
+        self._console = console
+        self._question_label = question_label
         self._prompt_renderer = get_prompt_renderer(self.config.drafter.prompts.base_path)
+
+    def _log(self, message: str) -> None:
+        if self._console is not None:
+            self._console.log(f"[bold cyan]{self._question_label}[/] {message}")
 
     def _build_messages(
         self, prompts_config: PromptsConfig, context_variables: dict[str, Any]
@@ -111,11 +126,17 @@ class CoVeOrchestrator(MaybeOrchestrator[CoVeVerifierConfig, CoVeCandidate]):
                 raise ValueError(msg)
 
     async def _run_drafter_phase(self, user_query: UserQuery) -> DraftResponse:
+        start = time.perf_counter()
+        self._log(f"drafter start provider={self.config.drafter.provider_config.provider}")
         messages = self._build_messages(self.config.drafter.prompts, user_query.model_dump())
         adapter = self._create_adapter(self.config.drafter)
-        return await adapter.acreate(messages, DraftResponse)
+        result = await adapter.acreate(messages, DraftResponse)
+        self._log(f"drafter done aligned={result.is_aligned} elapsed={time.perf_counter() - start:.2f}s")
+        return result
 
     async def _run_skeptic_phase(self, draft: DraftResponse, user_query: UserQuery) -> SkepticQuestions:
+        start = time.perf_counter()
+        self._log(f"skeptic start provider={self.config.skeptic.provider_config.provider}")
         context_variables = {
             "draft_reasoning": draft.reasoning,
             "draft_is_aligned": draft.is_aligned,
@@ -123,24 +144,43 @@ class CoVeOrchestrator(MaybeOrchestrator[CoVeVerifierConfig, CoVeCandidate]):
         }
         messages = self._build_messages(self.config.skeptic.prompts, context_variables)
         adapter = self._create_adapter(self.config.skeptic)
-        return await adapter.acreate(messages, SkepticQuestions)
+        result = await adapter.acreate(messages, SkepticQuestions)
+        self._log(f"skeptic done questions={len(result.questions)} elapsed={time.perf_counter() - start:.2f}s")
+        return result
 
     async def _run_fact_checker_phase(
         self,
         questions: list[str],
         user_query: UserQuery,
     ) -> list[FactCheckAnswer]:
-        async def _fact_check_question(question: str) -> FactCheckAnswer:
+        start = time.perf_counter()
+        self._log(
+            f"fact-check start provider={self.config.fact_checker.provider_config.provider} questions={len(questions)}"
+        )
+
+        async def _fact_check_question(index: int, question: str) -> FactCheckAnswer:
+            question_start = time.perf_counter()
+            self._log(f"fact-check {index}/{len(questions)} start")
             context_variables = {
                 "verification_question": question,
                 **user_query.model_dump(),
             }
             messages = self._build_messages(self.config.fact_checker.prompts, context_variables)
             adapter = self._create_adapter(self.config.fact_checker)
-            return await adapter.acreate(messages, FactCheckAnswer)
+            result = await adapter.acreate(messages, FactCheckAnswer)
+            self._log(
+                f"fact-check {index}/{len(questions)} done "
+                f"answer={result.answer} elapsed={time.perf_counter() - question_start:.2f}s"
+            )
+            return result
 
-        tasks = [asyncio.create_task(_fact_check_question(question)) for question in questions]
-        return await asyncio.gather(*tasks)
+        tasks = [
+            asyncio.create_task(_fact_check_question(index, question))
+            for index, question in enumerate(questions, start=1)
+        ]
+        results = await asyncio.gather(*tasks)
+        self._log(f"fact-check done elapsed={time.perf_counter() - start:.2f}s")
+        return results
 
     async def _run_judge_phase(
         self,
@@ -149,6 +189,8 @@ class CoVeOrchestrator(MaybeOrchestrator[CoVeVerifierConfig, CoVeCandidate]):
         fact_checks: list[FactCheckAnswer],
         user_query: UserQuery,
     ) -> JudgeVerdict:
+        start = time.perf_counter()
+        self._log(f"judge start provider={self.config.judge.provider_config.provider}")
         qa_pairs = list(zip(questions, fact_checks, strict=False))
         context_variables = {
             "draft_reasoning": draft.reasoning,
@@ -158,13 +200,21 @@ class CoVeOrchestrator(MaybeOrchestrator[CoVeVerifierConfig, CoVeCandidate]):
         }
         messages = self._build_messages(self.config.judge.prompts, context_variables)
         adapter = self._create_adapter(self.config.judge)
-        return await adapter.acreate(messages, JudgeVerdict)
+        result = await adapter.acreate(messages, JudgeVerdict)
+        self._log(
+            f"judge done aligned={result.is_aligned} "
+            f"confidence={result.confidence:.2f} elapsed={time.perf_counter() - start:.2f}s"
+        )
+        return result
 
     async def aexecute(self, user_query: UserQuery) -> CoVeCandidate:
+        start = time.perf_counter()
+        self._log("started")
         draft = await self._run_drafter_phase(user_query)
         questions_obj = await self._run_skeptic_phase(draft, user_query)
         fact_check_answers = await self._run_fact_checker_phase(questions_obj.questions, user_query)
         judge_verdict = await self._run_judge_phase(draft, questions_obj.questions, fact_check_answers, user_query)
+        self._log(f"finished elapsed={time.perf_counter() - start:.2f}s")
 
         chain_of_thought = [
             f"[Drafter] {draft.reasoning}",

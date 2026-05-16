@@ -6,6 +6,9 @@ import json
 import time
 from pathlib import Path
 
+from rich.console import Console
+from rich.table import Table
+
 from .agents.cove import CoVeCandidate, CoVeOrchestrator
 from .config.settings import get_settings
 from .types import BatchVerificationResult, UserQuery, VerificationResult
@@ -15,12 +18,14 @@ async def run_verification(
     user_query: UserQuery,
     env_file: str | None = None,
     yaml_file: str | None = None,
+    console: Console | None = None,
+    question_label: str = "Question",
 ) -> CoVeCandidate:
     """Run verification using CoVe (Chain-of-Verification)."""
     settings = get_settings(env_file=env_file, yaml_file=yaml_file)
     cove_config = settings.cove
 
-    orchestrator = CoVeOrchestrator(config=cove_config)
+    orchestrator = CoVeOrchestrator(config=cove_config, console=console, question_label=question_label)
     result = await orchestrator.aexecute(user_query)
 
     return result
@@ -30,10 +35,22 @@ async def run_batch_verification(
     user_queries: list[UserQuery],
     env_file: str | None = None,
     yaml_file: str | None = None,
+    console: Console | None = None,
 ) -> BatchVerificationResult:
     """Run verification on multiple user queries concurrently."""
+    if console is not None:
+        console.rule("[bold cyan]Batch CoVe Verification")
+        console.log(f"Starting {len(user_queries)} questions")
+
     tasks = [
-        run_verification(user_query=user_query, env_file=env_file, yaml_file=yaml_file) for user_query in user_queries
+        run_verification(
+            user_query=user_query,
+            env_file=env_file,
+            yaml_file=yaml_file,
+            console=console,
+            question_label=f"Question {index}/{len(user_queries)}",
+        )
+        for index, user_query in enumerate(user_queries, start=1)
     ]
     results = await asyncio.gather(*tasks)
 
@@ -44,6 +61,8 @@ async def run_batch_verification(
 
     aligned_count = sum(1 for r in results if r.is_aligned)
     total_confidence = sum(r.confidence for r in results)
+    if console is not None:
+        console.log(f"Batch finished aligned={aligned_count}/{len(results)}")
 
     return BatchVerificationResult(
         results=verification_results,
@@ -68,6 +87,7 @@ def load_questions(file_path: str | Path) -> list[UserQuery]:
 
 async def main() -> None:
     """Run verifications using the CoVe pipeline."""
+    console = Console()
     parser = argparse.ArgumentParser(description="Run verification on text pairs")
     parser.add_argument(
         "--input",
@@ -97,38 +117,43 @@ async def main() -> None:
     args = parser.parse_args()
 
     if args.input:
-        print(f"Loading questions from {args.input}...")
+        console.print(f"[bold]Loading questions from[/] {args.input}")
         user_queries = load_questions(args.input)
-        print(f"Loaded {len(user_queries)} questions")
+        console.print(f"[green]Loaded[/] {len(user_queries)} questions")
 
-        print("\n--- Running Batch CoVe Verification ---")
         start = time.perf_counter()
         batch_result = await run_batch_verification(
             user_queries,
             env_file=args.env_file,
             yaml_file=args.yaml_file,
+            console=console,
         )
         end = time.perf_counter()
-        print(f"Time taken: {end - start:.2f} seconds")
-        print("\nBatch Results:")
-        print(f"Total questions: {batch_result.total_questions}")
-        print(f"Aligned answers: {batch_result.aligned_count}")
-        print(f"Success rate: {batch_result.success_rate:.2%}")
-        print(f"Average confidence: {batch_result.average_confidence:.2f}")
+
+        table = Table(title="Batch Results")
+        table.add_column("Metric", style="bold")
+        table.add_column("Value", justify="right")
+        table.add_row("Time taken", f"{end - start:.2f}s")
+        table.add_row("Total questions", str(batch_result.total_questions))
+        table.add_row("Aligned answers", str(batch_result.aligned_count))
+        table.add_row("Success rate", f"{batch_result.success_rate:.2%}")
+        table.add_row("Average confidence", f"{batch_result.average_confidence:.2f}")
+        console.print(table)
 
         if args.output:
             output_path = Path(args.output)
             output_json = json.dumps(batch_result.model_dump(), indent=4, ensure_ascii=False)
             await asyncio.to_thread(output_path.write_text, output_json, "utf-8")
-            print(f"\nResults saved to {output_path}")
+            console.print(f"[green]Results saved to[/] {output_path}")
     else:
-        print("--- Running CoVe Verification ---")
+        console.rule("[bold cyan]CoVe Verification")
         await run_verification(
             user_query=UserQuery(
                 question="Who was the first woman to win two Nobel Prizes in different scientific fields?"
             ),
             env_file=args.env_file,
             yaml_file=args.yaml_file,
+            console=console,
         )
 
 

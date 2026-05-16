@@ -63,6 +63,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.per-file-ignores]
 "playground/**" = ["T201", "INP001", "N999"]
+"tests/**" = ["SLF001"]
 
 [lint.isort]
 known-first-party = ["omniadapters"]

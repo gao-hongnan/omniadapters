@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Self
+from typing import Any, Self
 
 from pydantic import BaseModel, model_validator
 from pydantic_settings import SettingsConfigDict
 from pydanticonf.settings import BaseSettingsWithYaml
 
-if TYPE_CHECKING:
-    from omniadapters.core.models import CompletionClientParams, ProviderConfig
-    from omniadapters.structify.models import InstructorConfig
+from omniadapters.core.models import CompletionClientParams, ProviderConfig  # noqa: TC001
+from omniadapters.structify.models import InstructorConfig  # noqa: TC001
 
 
 class PromptsConfig(BaseModel):

@@ -14,10 +14,7 @@ if TYPE_CHECKING:
 
 type MessageParam = dict[str, str | dict[str, Any] | Image | Audio | list[str | dict[str, Any] | Image | Audio]]
 ClientT = TypeVar("ClientT")
-ClientMessageT = TypeVar(
-    "ClientMessageT",
-    bound=AnthropicMessageParam | ChatCompletionMessageParam | ContentOrDict,
-)
+ClientMessageT = TypeVar("ClientMessageT", bound=AnthropicMessageParam | ChatCompletionMessageParam | ContentOrDict)
 # TODO: consider renaming ClientResponseT to CompletionResponseT
 ClientResponseT = TypeVar("ClientResponseT", bound=ChatCompletion | Message | GenerateContentResponse)
 ProviderConfigT = TypeVar("ProviderConfigT", bound="BaseProviderConfig")

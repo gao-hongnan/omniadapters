@@ -7,7 +7,7 @@ from instructor.core.hooks import HookName
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
 
     import instructor
 
@@ -78,7 +78,7 @@ def _setup_hooks(
 async def ahook_instructor(
     client: instructor.AsyncInstructor,
     enable: bool = True,
-) -> AsyncIterator[CompletionTrace[ClientResponseT]]:
+) -> AsyncGenerator[CompletionTrace[ClientResponseT]]:
     """Capture execution details from an asynchronous instructor client.
 
     Use this async context manager when working with asynchronous instructor

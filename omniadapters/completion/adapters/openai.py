@@ -15,6 +15,7 @@ except ImportError as e:
 
 from ...core.models import CompletionResponse, OpenAIProviderConfig, StreamChunk, Usage
 from ...core.usage_converter import to_usage
+from .._map_api_errors import _map_openai_errors
 from .base import BaseAdapter
 
 
@@ -87,12 +88,8 @@ class OpenAIAdapter(
     ) -> ChatCompletion | AsyncIterator[ChatCompletionChunk]:
         formatted_params = self._thanks_instructor(messages, **kwargs)
 
-        return await self.client.chat.completions.create(
-            # messages=formatted_messages,
-            # model=self.completion_params.model,
-            stream=stream,
-            **formatted_params,
-        )
+        with _map_openai_errors(model_name=self.completion_params.model):
+            return await self.client.chat.completions.create(stream=stream, **formatted_params)
 
     def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
         choice = response.choices[0] if response.choices else None

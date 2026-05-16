@@ -23,6 +23,7 @@ except ImportError as e:
 
 from ...core.models import CompletionResponse, GeminiProviderConfig, StreamChunk, Usage
 from ...core.usage_converter import to_usage
+from .._map_api_errors import _map_google_errors
 from .base import BaseAdapter
 
 
@@ -132,19 +133,10 @@ class GeminiAdapter(
     ) -> GenerateContentResponse | AsyncIterator[GenerateContentResponse]:
         formatted_params = self._thanks_instructor(messages, **kwargs)
 
-        if stream:
-            return await self.client.aio.models.generate_content_stream(
-                # model=model,
-                # contents=formatted_messages,
-                # config=cast(GenerateContentConfigDict, kwargs) if kwargs else None,
-                **formatted_params,
-            )
-        return await self.client.aio.models.generate_content(
-            # model=model,
-            # contents=formatted_messages,
-            # config=cast(GenerateContentConfigDict, kwargs) if kwargs else None,
-            **formatted_params,
-        )
+        with _map_google_errors(model_name=self.completion_params.model):
+            if stream:
+                return await self.client.aio.models.generate_content_stream(**formatted_params)
+            return await self.client.aio.models.generate_content(**formatted_params)
 
     def _to_unified_response(self, response: GenerateContentResponse) -> CompletionResponse[GenerateContentResponse]:
         content = ""

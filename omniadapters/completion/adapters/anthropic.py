@@ -18,6 +18,7 @@ except ImportError as e:
 
 from ...core.models import AnthropicProviderConfig, CompletionResponse, StreamChunk, Usage
 from ...core.usage_converter import to_usage
+from .._map_api_errors import _map_anthropic_errors
 from .base import BaseAdapter
 
 
@@ -80,13 +81,8 @@ class AnthropicAdapter(
     ) -> Message | AsyncIterator[RawMessageStreamEvent]:
         formatted_params = self._thanks_instructor(messages, **kwargs)
         # NOTE: least overload needed requires model and max_tokens!
-        return await self.client.messages.create(
-            # messages=formatted_messages,
-            # model=self.completion_params.model,
-            # max_tokens=kwargs.pop("max_tokens", 1024),  # NOTE: anthropic requires `max_tokens` to be specified
-            stream=stream,
-            **formatted_params,
-        )
+        with _map_anthropic_errors(model_name=self.completion_params.model):
+            return await self.client.messages.create(stream=stream, **formatted_params)
 
     def _to_unified_response(self, response: Message) -> CompletionResponse[Message]:
         content = ""
@@ -109,18 +105,11 @@ class AnthropicAdapter(
 
             text_val = getattr(delta, "text", None)
             if isinstance(text_val, str):
-                return StreamChunk(
-                    content=text_val,
-                    raw_chunk=chunk,
-                )
+                return StreamChunk(content=text_val, raw_chunk=chunk)
 
             partial_json = getattr(delta, "partial_json", None)
             if partial_json is not None:
-                return StreamChunk(
-                    content="",
-                    tool_calls=[{"partial_json": partial_json}],
-                    raw_chunk=chunk,
-                )
+                return StreamChunk(content="", tool_calls=[{"partial_json": partial_json}], raw_chunk=chunk)
 
         elif chunk.type == "content_block_start":
             content_block = getattr(chunk, "content_block", None)
@@ -136,9 +125,5 @@ class AnthropicAdapter(
                     )
 
         elif chunk.type == "message_stop":
-            return StreamChunk(
-                content="",
-                finish_reason="stop",
-                raw_chunk=chunk,
-            )
+            return StreamChunk(content="", finish_reason="stop", raw_chunk=chunk)
         return None

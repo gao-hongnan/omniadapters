@@ -4,10 +4,10 @@ import asyncio
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING
 
 import instructor
 import pytest
-from openai import AsyncOpenAI
 from pydantic import SecretStr
 
 from omniadapters.core.models import (
@@ -16,6 +16,12 @@ from omniadapters.core.models import (
 )
 from omniadapters.structify.adapters.openai import OpenAIAdapter
 from omniadapters.structify.models import InstructorConfig
+
+if TYPE_CHECKING:
+    from openai import AsyncOpenAI
+
+_THREAD_COUNT = 100
+_STRESS_THREAD_COUNT = 500
 
 
 @pytest.mark.unit
@@ -32,29 +38,32 @@ class TestAdapterThreadSafety:
         )
 
         clients: list[AsyncOpenAI] = []
-        errors: list[Exception] = []
+        lock = threading.Lock()
+        unhandled_errors: list[BaseException] = []
+
+        def record_unhandled(args: threading.ExceptHookArgs) -> None:
+            if args.exc_value is not None:
+                with lock:
+                    unhandled_errors.append(args.exc_value)
 
         def access_client() -> None:
-            try:
-                client = adapter.client
+            client = adapter.client
+            with lock:
                 clients.append(client)
-            except Exception as e:
-                errors.append(e)
 
-        threads = []
-        for _ in range(100):
-            thread = threading.Thread(target=access_client)
-            threads.append(thread)
+        old_hook = threading.excepthook
+        threading.excepthook = record_unhandled
+        try:
+            threads = [threading.Thread(target=access_client) for _ in range(_THREAD_COUNT)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        finally:
+            threading.excepthook = old_hook
 
-        for thread in threads:
-            thread.start()
-
-        for thread in threads:
-            thread.join()
-
-        assert len(errors) == 0, f"Errors occurred: {errors}"
-
-        assert len(clients) == 100
+        assert len(unhandled_errors) == 0, f"Errors occurred: {unhandled_errors}"
+        assert len(clients) == _THREAD_COUNT
         assert all(client is clients[0] for client in clients), "Multiple client instances created!"
 
     def test_concurrent_instructor_access_thread_safety(self) -> None:
@@ -69,30 +78,33 @@ class TestAdapterThreadSafety:
         )
 
         instructors: list[instructor.AsyncInstructor] = []
-        errors: list[Exception] = []
+        lock = threading.Lock()
+        unhandled_errors: list[BaseException] = []
+
+        def record_unhandled(args: threading.ExceptHookArgs) -> None:
+            if args.exc_value is not None:
+                with lock:
+                    unhandled_errors.append(args.exc_value)
 
         def access_instructor() -> None:
-            try:
-                instructor = adapter.instructor
-                instructors.append(instructor)
-            except Exception as e:
-                errors.append(e)
+            instr = adapter.instructor
+            with lock:
+                instructors.append(instr)
 
-        threads = []
-        for _ in range(100):
-            thread = threading.Thread(target=access_instructor)
-            threads.append(thread)
+        old_hook = threading.excepthook
+        threading.excepthook = record_unhandled
+        try:
+            threads = [threading.Thread(target=access_instructor) for _ in range(_THREAD_COUNT)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        finally:
+            threading.excepthook = old_hook
 
-        for thread in threads:
-            thread.start()
-
-        for thread in threads:
-            thread.join()
-
-        assert len(errors) == 0, f"Errors occurred: {errors}"
-
-        assert len(instructors) == 100
-        assert all(instructor is instructors[0] for instructor in instructors), "Multiple instructor instances created!"
+        assert len(unhandled_errors) == 0, f"Errors occurred: {unhandled_errors}"
+        assert len(instructors) == _THREAD_COUNT
+        assert all(instr is instructors[0] for instr in instructors), "Multiple instructor instances created!"
 
     def test_stress_test_concurrent_access(self) -> None:
         provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
@@ -105,37 +117,27 @@ class TestAdapterThreadSafety:
             instructor_config=instructor_config,
         )
 
-        results: dict[str, list[AsyncOpenAI | instructor.AsyncInstructor | Exception]] = {
-            "clients": [],
-            "instructors": [],
-            "errors": [],
-        }
+        clients: list[AsyncOpenAI | instructor.AsyncInstructor] = []
+        instructors: list[AsyncOpenAI | instructor.AsyncInstructor] = []
         lock = threading.Lock()
 
         def access_both_properties() -> None:
-            try:
-                client = adapter.client
-                instructor = adapter.instructor
-                with lock:
-                    results["clients"].append(client)
-                    results["instructors"].append(instructor)
-            except Exception as e:
-                with lock:
-                    results["errors"].append(e)
+            client = adapter.client
+            instr = adapter.instructor
+            with lock:
+                clients.append(client)
+                instructors.append(instr)
 
         with ThreadPoolExecutor(max_workers=50) as executor:
-            futures = [executor.submit(access_both_properties) for _ in range(500)]
-
+            futures = [executor.submit(access_both_properties) for _ in range(_STRESS_THREAD_COUNT)]
             for future in futures:
                 future.result()
 
-        assert len(results["errors"]) == 0, f"Errors occurred: {results['errors']}"
+        assert len(clients) == _STRESS_THREAD_COUNT
+        assert all(client is clients[0] for client in clients)
 
-        assert len(results["clients"]) == 500
-        assert all(client is results["clients"][0] for client in results["clients"])
-
-        assert len(results["instructors"]) == 500
-        assert all(instructor is results["instructors"][0] for instructor in results["instructors"])
+        assert len(instructors) == _STRESS_THREAD_COUNT
+        assert all(instr is instructors[0] for instr in instructors)
 
     def test_initialization_happens_only_once(self) -> None:
         create_client_count = 0
@@ -196,15 +198,15 @@ class TestAdapterThreadSafety:
 
         async def access_properties_async() -> None:
             client = adapter.client
-            instructor = adapter.instructor
+            instr = adapter.instructor
             clients.append(client)
-            instructors.append(instructor)
+            instructors.append(instr)
 
         tasks = [access_properties_async() for _ in range(50)]
         await asyncio.gather(*tasks)
 
         assert all(client is clients[0] for client in clients)
-        assert all(instructor is instructors[0] for instructor in instructors)
+        assert all(instr is instructors[0] for instr in instructors)
 
     def test_no_deadlock_with_nested_access(self) -> None:
         provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))

@@ -38,8 +38,9 @@ class TestProviderEnum:
         assert "claude" not in Provider
 
     def test_provider_enum_iteration(self) -> None:
+        expected_provider_count = 4
         providers = list(Provider)
-        assert len(providers) == 4
+        assert len(providers) == expected_provider_count
         assert Provider.OPENAI in providers
         assert Provider.ANTHROPIC in providers
         assert Provider.GEMINI in providers
@@ -76,7 +77,7 @@ class TestProviderEnum:
         assert Provider("anthropic") == Provider.ANTHROPIC
         assert Provider("gemini") == Provider.GEMINI
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="is not a valid Provider"):
             Provider("invalid_provider")
 
 
@@ -99,8 +100,9 @@ class TestCapabilityEnum:
         assert "text_generation" not in Capability
 
     def test_capability_enum_iteration(self) -> None:
+        expected_capability_count = 4
         capabilities = list(Capability)
-        assert len(capabilities) == 4
+        assert len(capabilities) == expected_capability_count
         assert Capability.COMPLETION in capabilities
         assert Capability.EMBEDDING in capabilities
         assert Capability.VISION in capabilities
@@ -139,7 +141,7 @@ class TestCapabilityEnum:
         assert Capability("vision") == Capability.VISION
         assert Capability("audio") == Capability.AUDIO
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="is not a valid Capability"):
             Capability("invalid_capability")
 
 
@@ -242,8 +244,9 @@ class TestTypeAnnotations:
 @pytest.mark.unit
 class TestEnumExtensibility:
     def test_provider_extensibility(self) -> None:
+        expected_current_provider_count = 3
         current_providers = {Provider.OPENAI, Provider.ANTHROPIC, Provider.GEMINI}
-        assert len(current_providers) == 3
+        assert len(current_providers) == expected_current_provider_count
 
         for provider in current_providers:
             assert isinstance(provider, str)
@@ -251,8 +254,9 @@ class TestEnumExtensibility:
             assert provider.islower()
 
     def test_capability_extensibility(self) -> None:
+        expected_current_capability_count = 4
         current_capabilities = {Capability.COMPLETION, Capability.EMBEDDING, Capability.VISION, Capability.AUDIO}
-        assert len(current_capabilities) == 4
+        assert len(current_capabilities) == expected_current_capability_count
 
         for capability in current_capabilities:
             assert isinstance(capability, str)

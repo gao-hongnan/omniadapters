@@ -119,6 +119,10 @@ class TestAdapterRegistry:
         assert adapter.provider_config.provider == "gemini"
 
     def test_factory_preserves_config_attributes(self) -> None:
+        expected_temperature = 0.7
+        expected_max_tokens = 1000
+        expected_max_retries = 3
+
         provider_config = OpenAIProviderConfig.model_validate(
             {
                 "api_key": SecretStr("test_key"),
@@ -129,14 +133,14 @@ class TestAdapterRegistry:
         completion_params = OpenAICompletionClientParams.model_validate(
             {
                 "model": "gpt-4",
-                "temperature": 0.7,
-                "max_tokens": 1000,
+                "temperature": expected_temperature,
+                "max_tokens": expected_max_tokens,
             }
         )
         instructor_config = InstructorConfig.model_validate(
             {
                 "mode": instructor.Mode.TOOLS,
-                "max_retries": 3,
+                "max_retries": expected_max_retries,
             }
         )
 
@@ -155,11 +159,11 @@ class TestAdapterRegistry:
         assert provider_data["base_url"] == "https://custom.openai.com"
 
         completion_data = adapter.completion_params.model_dump()
-        assert completion_data["temperature"] == 0.7
-        assert completion_data["max_tokens"] == 1000
+        assert completion_data["temperature"] == expected_temperature
+        assert completion_data["max_tokens"] == expected_max_tokens
 
         instructor_data = adapter.instructor_config.model_dump()
-        assert instructor_data["max_retries"] == 3
+        assert instructor_data["max_retries"] == expected_max_retries
 
     def test_factory_immutability(self) -> None:
         provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
@@ -201,30 +205,39 @@ class TestAdapterRegistry:
         assert adapter.instructor_config.mode == instructor.Mode.TOOLS
 
     def test_factory_with_maximal_config(self) -> None:
+        expected_timeout = 30.0
+        expected_max_retries = 5
+        expected_temperature = 0.7
+        expected_max_tokens = 1000
+        expected_top_p = 0.9
+        expected_frequency_penalty = 0.1
+        expected_presence_penalty = 0.1
+        expected_instructor_max_retries = 3
+
         provider_config = OpenAIProviderConfig.model_validate(
             {
                 "api_key": SecretStr("test_key"),
                 "organization": "test_org",
                 "base_url": "https://custom.openai.com",
-                "timeout": 30.0,
-                "max_retries": 5,
+                "timeout": expected_timeout,
+                "max_retries": expected_max_retries,
             }
         )
         completion_params = OpenAICompletionClientParams.model_validate(
             {
                 "model": "gpt-4",
-                "temperature": 0.7,
-                "max_tokens": 1000,
-                "top_p": 0.9,
-                "frequency_penalty": 0.1,
-                "presence_penalty": 0.1,
+                "temperature": expected_temperature,
+                "max_tokens": expected_max_tokens,
+                "top_p": expected_top_p,
+                "frequency_penalty": expected_frequency_penalty,
+                "presence_penalty": expected_presence_penalty,
                 "stream": False,
             }
         )
         instructor_config = InstructorConfig.model_validate(
             {
                 "mode": instructor.Mode.TOOLS,
-                "max_retries": 3,
+                "max_retries": expected_instructor_max_retries,
                 "validation_context": {"strict": True},
             }
         )
@@ -240,19 +253,19 @@ class TestAdapterRegistry:
         provider_data = adapter.provider_config.model_dump()
         assert provider_data["organization"] == "test_org"
         assert provider_data["base_url"] == "https://custom.openai.com"
-        assert provider_data["timeout"] == 30.0
-        assert provider_data["max_retries"] == 5
+        assert provider_data["timeout"] == expected_timeout
+        assert provider_data["max_retries"] == expected_max_retries
 
         completion_data = adapter.completion_params.model_dump()
-        assert completion_data["temperature"] == 0.7
-        assert completion_data["max_tokens"] == 1000
-        assert completion_data["top_p"] == 0.9
-        assert completion_data["frequency_penalty"] == 0.1
-        assert completion_data["presence_penalty"] == 0.1
+        assert completion_data["temperature"] == expected_temperature
+        assert completion_data["max_tokens"] == expected_max_tokens
+        assert completion_data["top_p"] == expected_top_p
+        assert completion_data["frequency_penalty"] == expected_frequency_penalty
+        assert completion_data["presence_penalty"] == expected_presence_penalty
         assert completion_data["stream"] is False
 
         instructor_data = adapter.instructor_config.model_dump()
-        assert instructor_data["max_retries"] == 3
+        assert instructor_data["max_retries"] == expected_instructor_max_retries
         assert instructor_data["validation_context"]["strict"] is True
 
 
@@ -398,7 +411,7 @@ class TestFactoryTypeAnnotations:
     def test_factory_handles_dynamic_invalid_config(self) -> None:
         from typing import Literal
 
-        DynamicProviderConfig = type(
+        dynamic_provider_config = type(
             "DynamicProviderConfig",
             (BaseProviderConfig,),
             {
@@ -406,7 +419,7 @@ class TestFactoryTypeAnnotations:
                 "provider": "dynamic_invalid",
             },
         )
-        invalid_config = DynamicProviderConfig(api_key=SecretStr("test"))
+        invalid_config = dynamic_provider_config(api_key=SecretStr("test"))
 
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)

@@ -1,22 +1,25 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import MagicMock
 
 import pytest
-from anthropic.types import Message as AnthropicResponse
-from google.genai.types import GenerateContentResponse
 from instructor.hooks import HookName
-from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
 
-from omniadapters.core.types import MessageParam
 from omniadapters.structify.hooks import (
     CompletionTrace,
     HookHandler,
     _setup_hooks,
     ahook_instructor,
 )
+
+if TYPE_CHECKING:
+    from anthropic.types import Message as AnthropicResponse
+    from google.genai.types import GenerateContentResponse
+    from openai.types.chat import ChatCompletion
+
+    from omniadapters.core.types import MessageParam
 
 
 class SampleModel(BaseModel):
@@ -83,7 +86,8 @@ class TestCompletionTrace:
         assert data["messages"] == [{"role": "user", "content": "test"}]
 
     def test_completion_trace_arbitrary_types(self) -> None:
-        custom_object = SampleModel(name="test", value=42)
+        expected_value = 42
+        custom_object = SampleModel(name="test", value=expected_value)
 
         trace: CompletionTrace[Any] = CompletionTrace(
             parsed_result=custom_object,
@@ -92,12 +96,13 @@ class TestCompletionTrace:
         assert trace.parsed_result == custom_object
         assert isinstance(trace.parsed_result, SampleModel)
         assert trace.parsed_result.name == "test"
-        assert trace.parsed_result.value == 42
+        assert trace.parsed_result.value == expected_value
 
 
 @pytest.mark.unit
 class TestSetupHooks:
     def testsetup_hooks_returns_trace_and_hooks(self) -> None:
+        expected_hook_count = 5
         mock_client = MagicMock()
         mock_client.on = MagicMock()
 
@@ -107,7 +112,7 @@ class TestSetupHooks:
 
         assert isinstance(trace, CompletionTrace)
         assert isinstance(hooks, list)
-        assert len(hooks) == 5
+        assert len(hooks) == expected_hook_count
 
         hook_names = [hook[0] for hook in hooks]
         expected_hooks = [
@@ -120,14 +125,13 @@ class TestSetupHooks:
         assert hook_names == expected_hooks
 
     def testsetup_hooks_registers_handlers(self) -> None:
+        expected_hook_count = 5
         mock_client = MagicMock()
         mock_client.on = MagicMock()
 
-        trace: CompletionTrace[Any]
-        hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = _setup_hooks(mock_client)
+        _, _ = _setup_hooks(mock_client)
 
-        assert mock_client.on.call_count == 5
+        assert mock_client.on.call_count == expected_hook_count
 
         calls = mock_client.on.call_args_list
         expected_hooks = [
@@ -210,6 +214,7 @@ class TestAhookInstructor:
         mock_client.on.assert_not_called()
 
     async def test_ahook_instructor_enabled(self) -> None:
+        expected_hook_count = 5
         mock_client = MagicMock()
         mock_client.on = MagicMock()
         mock_client.off = MagicMock()
@@ -218,11 +223,12 @@ class TestAhookInstructor:
         async with ahook_instructor(mock_client, enable=True) as trace:
             assert isinstance(trace, CompletionTrace)
 
-            assert mock_client.on.call_count == 5
+            assert mock_client.on.call_count == expected_hook_count
 
-        assert mock_client.off.call_count == 5
+        assert mock_client.off.call_count == expected_hook_count
 
     async def test_ahook_instructor_default_enabled(self) -> None:
+        expected_hook_count = 5
         mock_client = MagicMock()
         mock_client.on = MagicMock()
         mock_client.off = MagicMock()
@@ -230,23 +236,28 @@ class TestAhookInstructor:
         trace: CompletionTrace[Any]
         async with ahook_instructor(mock_client) as trace:
             assert isinstance(trace, CompletionTrace)
-            assert mock_client.on.call_count == 5
+            assert mock_client.on.call_count == expected_hook_count
 
-        assert mock_client.off.call_count == 5
+        assert mock_client.off.call_count == expected_hook_count
 
     async def test_ahook_instructor_cleanup_on_exception(self) -> None:
+        expected_hook_count = 5
+        test_error_msg = "test error"
         mock_client = MagicMock()
         mock_client.on = MagicMock()
         mock_client.off = MagicMock()
 
-        with pytest.raises(ValueError, match="test error"):
+        async def _run_and_raise() -> None:
             trace: CompletionTrace[Any]
             async with ahook_instructor(mock_client, enable=True) as trace:
                 assert isinstance(trace, CompletionTrace)
-                assert mock_client.on.call_count == 5
-                raise ValueError("test error")
+                assert mock_client.on.call_count == expected_hook_count
+                raise ValueError(test_error_msg)
 
-        assert mock_client.off.call_count == 5
+        with pytest.raises(ValueError, match="test error"):
+            await _run_and_raise()
+
+        assert mock_client.off.call_count == expected_hook_count
 
     async def test_ahook_instructor_hook_deregistration(self) -> None:
         mock_client = MagicMock()
@@ -285,6 +296,7 @@ class TestAhookInstructor:
             assert trace.raw_response == test_response
 
     async def test_ahook_instructor_multiple_contexts(self) -> None:
+        expected_hook_count = 5
         mock_client1 = MagicMock()
         mock_client1.on = MagicMock()
         mock_client1.off = MagicMock()
@@ -303,11 +315,11 @@ class TestAhookInstructor:
             assert isinstance(trace1, CompletionTrace)
             assert isinstance(trace2, CompletionTrace)
 
-            assert mock_client1.on.call_count == 5
-            assert mock_client2.on.call_count == 5
+            assert mock_client1.on.call_count == expected_hook_count
+            assert mock_client2.on.call_count == expected_hook_count
 
-        assert mock_client1.off.call_count == 5
-        assert mock_client2.off.call_count == 5
+        assert mock_client1.off.call_count == expected_hook_count
+        assert mock_client2.off.call_count == expected_hook_count
 
 
 @pytest.mark.unit
@@ -341,8 +353,10 @@ class TestHookIntegration:
         assert trace.completion_kwargs == kwargs
         assert trace.messages == kwargs["messages"]
         assert trace.raw_response == response
-        assert trace.error is None
-        assert trace.parse_error is None
+        error_after_response = trace.error
+        parse_error_after_response = trace.parse_error
+        assert error_after_response is None
+        assert parse_error_after_response is None
 
     def test_hook_system_error_scenarios(self) -> None:
         mock_client = MagicMock()

@@ -73,30 +73,18 @@ def create_adapter(
         case OpenAIProviderConfig():
             from .adapters.openai import OpenAIAdapter
 
-            return OpenAIAdapter(
-                provider_config=provider_config,
-                completion_params=completion_params,
-            )
+            return OpenAIAdapter(provider_config=provider_config, completion_params=completion_params)
         case AnthropicProviderConfig():
             from .adapters.anthropic import AnthropicAdapter
 
-            return AnthropicAdapter(
-                provider_config=provider_config,
-                completion_params=completion_params,
-            )
+            return AnthropicAdapter(provider_config=provider_config, completion_params=completion_params)
         case GeminiProviderConfig():
             from .adapters.gemini import GeminiAdapter
 
-            return GeminiAdapter(
-                provider_config=provider_config,
-                completion_params=completion_params,
-            )
+            return GeminiAdapter(provider_config=provider_config, completion_params=completion_params)
         case AzureOpenAIProviderConfig():
             from .adapters.azure_openai import AzureOpenAIAdapter
 
-            return AzureOpenAIAdapter(
-                provider_config=provider_config,
-                completion_params=completion_params,
-            )
+            return AzureOpenAIAdapter(provider_config=provider_config, completion_params=completion_params)
         case _:
             assert_never(provider_config)

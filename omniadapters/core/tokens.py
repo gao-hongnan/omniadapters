@@ -132,10 +132,7 @@ class GeminiTokenCounterAdapter(BaseTokenCounterAdapter):
                 raise ImportError(GEMINI_IMPORT_ERROR) from e
             self._client = genai.Client(api_key=self._api_key)
 
-        response = await self._client.aio.models.count_tokens(
-            model=self._model,
-            contents=text,
-        )
+        response = await self._client.aio.models.count_tokens(model=self._model, contents=text)
         return response.total_tokens or 0
 
 

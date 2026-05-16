@@ -39,7 +39,7 @@ class TestModelPricing:
             pricing.input_cost_per_million = Decimal("5.00")  # type: ignore[misc]
 
     def test_negative_cost_rejected(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="input_cost_per_million"):
             ModelPricing(
                 input_cost_per_million=Decimal("-1.00"),
                 output_cost_per_million=Decimal("10.00"),
@@ -140,26 +140,33 @@ class TestComputeCostFromUsage:
 class TestUsageTracker:
     def test_track_single_request(self) -> None:
         tracker = UsageTracker()
+        expected_input = 1000
+        expected_output = 500
+        expected_total = 1500
         result = tracker.track(
-            input_tokens=1000,
-            output_tokens=500,
+            input_tokens=expected_input,
+            output_tokens=expected_output,
             model=Model.GPT_4O,
         )
         assert result is not None
-        assert result.input_tokens == 1000
-        assert result.output_tokens == 500
-        assert result.total_tokens == 1500
+        assert result.input_tokens == expected_input
+        assert result.output_tokens == expected_output
+        assert result.total_tokens == expected_total
         assert result.model == Model.GPT_4O
 
     def test_track_multiple_requests(self) -> None:
         tracker = UsageTracker()
+        expected_request_count = 2
+        expected_total_input = 3000
+        expected_total_output = 1500
+        expected_total = 4500
         tracker.track(input_tokens=1000, output_tokens=500, model=Model.GPT_4O)
         tracker.track(input_tokens=2000, output_tokens=1000, model=Model.GPT_4O)
 
-        assert tracker.request_count == 2
-        assert tracker.total_input_tokens == 3000
-        assert tracker.total_output_tokens == 1500
-        assert tracker.total_tokens == 4500
+        assert tracker.request_count == expected_request_count
+        assert tracker.total_input_tokens == expected_total_input
+        assert tracker.total_output_tokens == expected_total_output
+        assert tracker.total_tokens == expected_total
 
     def test_track_unknown_model_returns_none(self) -> None:
         tracker = UsageTracker()
@@ -217,9 +224,12 @@ class TestUsageTracker:
 
         combined = tracker1 + tracker2
 
-        assert combined.request_count == 2
-        assert combined.total_input_tokens == 3000
-        assert combined.total_output_tokens == 1500
+        expected_request_count = 2
+        expected_total_input = 3000
+        expected_total_output = 1500
+        assert combined.request_count == expected_request_count
+        assert combined.total_input_tokens == expected_total_input
+        assert combined.total_output_tokens == expected_total_output
 
 
 class TestUsageSnapshot:

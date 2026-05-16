@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import pytest
 
+_HTTP_TOO_MANY_REQUESTS = 429
+
 from omniadapters.completion.errors import (
     CompletionAdapterError,
     CompletionAPIError,
@@ -64,12 +66,12 @@ class TestCompletionAPIError:
 @pytest.mark.unit
 class TestCompletionHTTPError:
     def test_status_code_attribute(self) -> None:
-        err = CompletionHTTPError(429, "gpt-4", {"error": "rate_limit"})
-        assert err.status_code == 429
+        err = CompletionHTTPError(_HTTP_TOO_MANY_REQUESTS, "gpt-4", {"error": "rate_limit"})
+        assert err.status_code == _HTTP_TOO_MANY_REQUESTS
 
     def test_body_attribute(self) -> None:
         body = {"error": "rate_limit"}
-        err = CompletionHTTPError(429, "gpt-4", body)
+        err = CompletionHTTPError(_HTTP_TOO_MANY_REQUESTS, "gpt-4", body)
         assert err.body is body
 
     def test_body_defaults_to_none(self) -> None:

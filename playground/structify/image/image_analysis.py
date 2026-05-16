@@ -30,9 +30,8 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from typing import Any, Literal, assert_never, cast
+from typing import TYPE_CHECKING, Any, Literal, assert_never, cast
 
-from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, Field
 from rich.console import Console
 from rich.live import Live
@@ -43,14 +42,19 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import CompletionResult
 from playground.structify.image.settings import create_demo_adapter
+
+if TYPE_CHECKING:
+    from openai.types.chat import ChatCompletionMessageParam
+
+    from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+    from omniadapters.structify.adapters.gemini import GeminiAdapter
+    from omniadapters.structify.adapters.openai import OpenAIAdapter
+    from omniadapters.structify.models import CompletionResult
 
 console = Console()
 
+MAX_DISPLAYED_OBJECTS = 5
 SYSTEM_MESSAGE = "You are an expert image analyst. Provide detailed, structured analysis of images."
 USER_PROMPT = "Analyze this image in detail. Identify all objects, text, charts, scene elements, and provide insights."
 
@@ -75,7 +79,7 @@ class ImageAnalysis(BaseModel):
 
 
 def build_provider_message_content(image_url: str, provider: Literal["openai", "anthropic"]) -> Any:
-    """Build provider-specific message content for image analysis"""
+    """Build provider-specific message content for image analysis."""
     match provider:
         case "openai":
             return [{"type": "text", "text": USER_PROMPT}, {"type": "image_url", "image_url": {"url": image_url}}]
@@ -91,7 +95,7 @@ def build_provider_message_content(image_url: str, provider: Literal["openai", "
 def build_analysis_messages(
     image_url: str, provider: Literal["openai", "anthropic", "gemini"]
 ) -> list[ChatCompletionMessageParam]:
-    """Build messages for image analysis across all providers"""
+    """Build messages for image analysis across all providers."""
     if provider == "gemini":
         from instructor.multimodal import Image
 
@@ -130,9 +134,11 @@ def create_analysis_table(analysis: ImageAnalysis, provider_name: str) -> Table:
     table.add_row("Description", analysis.description)
 
     if analysis.detected_objects:
-        objects_str = "\n".join(f"✓ {obj.label} ({obj.confidence:.2f})" for obj in analysis.detected_objects[:5])
-        if len(analysis.detected_objects) > 5:
-            objects_str += f"\n... and {len(analysis.detected_objects) - 5} more"
+        objects_str = "\n".join(
+            f"✓ {obj.label} ({obj.confidence:.2f})" for obj in analysis.detected_objects[:MAX_DISPLAYED_OBJECTS]
+        )
+        if len(analysis.detected_objects) > MAX_DISPLAYED_OBJECTS:
+            objects_str += f"\n... and {len(analysis.detected_objects) - MAX_DISPLAYED_OBJECTS} more"
         table.add_row("Detected Objects", objects_str)
 
     table.add_row("Confidence", analysis.confidence_level.replace("_", " ").title())
@@ -150,7 +156,7 @@ def format_streaming_text(partial: ImageAnalysis) -> Text:
 
     if hasattr(partial, "detected_objects") and partial.detected_objects:
         text.append("🎯 Detected Objects:\n", style="bold green")
-        for obj in partial.detected_objects[:5]:
+        for obj in partial.detected_objects[:MAX_DISPLAYED_OBJECTS]:
             text.append(f"   • {obj.label}", style="green")
             if obj.confidence:
                 text.append(f" ({obj.confidence:.2f})", style="dim green")
@@ -162,7 +168,7 @@ def format_streaming_text(partial: ImageAnalysis) -> Text:
 
 def display_trace_info(result: CompletionResult[Any, Any]) -> None:
     json_display = Syntax(
-        code=result.trace.model_dump_json(indent=4, fallback=lambda x: str(x)),
+        code=result.trace.model_dump_json(indent=4, fallback=str),
         lexer="json",
         theme="monokai",
         line_numbers=False,

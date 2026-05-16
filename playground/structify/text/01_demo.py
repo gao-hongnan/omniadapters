@@ -11,7 +11,7 @@
 # ]
 # ///
 
-"""Structify Adapter Pattern Demo - Movie Review CLI
+"""Structify Adapter Pattern Demo - Movie Review CLI.
 
 ```bash
 uv run playground/structify/text/01_demo.py --provider all
@@ -42,10 +42,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import time
-from typing import Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Literal, Union
 
 from openai.types.chat import (
-    ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
 )
@@ -59,13 +58,19 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
-from omniadapters.structify.models import CompletionResult
 from playground.structify.text.settings import create_demo_adapter
 
+if TYPE_CHECKING:
+    from openai.types.chat import ChatCompletionMessageParam
+
+    from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+    from omniadapters.structify.adapters.gemini import GeminiAdapter
+    from omniadapters.structify.adapters.openai import OpenAIAdapter
+    from omniadapters.structify.models import CompletionResult
+
 console = Console()
+
+MAX_SUMMARY_DISPLAY_LENGTH = 100
 
 
 # NOTE
@@ -131,7 +136,7 @@ def format_streaming_text(partial: MovieReview) -> Text:
 
 def display_trace_info(result: CompletionResult[Any, Any]) -> None:
     json_display = Syntax(
-        code=result.trace.model_dump_json(indent=4, fallback=lambda x: str(x)),
+        code=result.trace.model_dump_json(indent=4, fallback=str),
         lexer="json",
         theme="monokai",
         line_numbers=False,
@@ -248,7 +253,9 @@ async def areview_movies_concurrent(
         for _, (movie, messages) in enumerate(zip(movies, messages_list, strict=False)):
             task_id = progress.add_task(description=f"Reviewing '{movie}'...", total=None)
 
-            async def review_with_progress(msgs: list[ChatCompletionMessageParam], movie_title: str, tid: Any):
+            async def review_with_progress(
+                msgs: list[ChatCompletionMessageParam], movie_title: str, tid: Any
+            ) -> MovieReview:
                 try:
                     if show_trace:
                         result = await adapter.acreate(
@@ -263,10 +270,11 @@ async def areview_movies_concurrent(
                         response_model=MovieReview,
                     )
                     progress.update(tid, description=f"✓ '{movie_title}' complete")
-                    return review
                 except Exception as e:
                     progress.update(tid, description=f"✗ '{movie_title}' failed: {e}")
                     raise
+                else:
+                    return review
 
             tasks.append(review_with_progress(messages, movie, task_id))
 
@@ -291,7 +299,7 @@ async def areview_movies_concurrent(
         table.add_row(
             review.title,
             f"⭐ {review.rating}/10",
-            summary[:100] + "..." if len(summary) > 100 else summary,
+            summary[:MAX_SUMMARY_DISPLAY_LENGTH] + "..." if len(summary) > MAX_SUMMARY_DISPLAY_LENGTH else summary,
         )
 
     console.print(table)
@@ -362,7 +370,7 @@ async def areview_movies_concurrent_streaming(
         table.add_row(
             review.title,
             f"⭐ {review.rating}/10",
-            summary[:100] + "..." if len(summary) > 100 else summary,
+            summary[:MAX_SUMMARY_DISPLAY_LENGTH] + "..." if len(summary) > MAX_SUMMARY_DISPLAY_LENGTH else summary,
         )
 
     console.print(table)

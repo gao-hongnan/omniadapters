@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import instructor
@@ -9,8 +8,12 @@ import pytest
 from anthropic import AsyncAnthropic
 from google import genai
 from openai import AsyncOpenAI
-from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, SecretStr
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from openai.types.chat import ChatCompletionMessageParam
 
 from omniadapters.core.models import (
     AnthropicCompletionClientParams,
@@ -48,8 +51,10 @@ class TestBaseAdapter:
         assert adapter.provider_config == provider_config
         assert adapter.completion_params == completion_params
         assert adapter.instructor_config == instructor_config
-        assert hasattr(adapter, "_client") and getattr(adapter, "_client", None) is None
-        assert hasattr(adapter, "_instructor") and getattr(adapter, "_instructor", None) is None
+        assert hasattr(adapter, "_client")
+        assert getattr(adapter, "_client", None) is None
+        assert hasattr(adapter, "_instructor")
+        assert getattr(adapter, "_instructor", None) is None
 
     def test_lazy_client_initialization(self) -> None:
         provider_config = OpenAIProviderConfig(api_key=SecretStr("test_key"))
@@ -62,12 +67,14 @@ class TestBaseAdapter:
             instructor_config=instructor_config,
         )
 
-        assert hasattr(adapter, "_client") and getattr(adapter, "_client", None) is None
+        assert hasattr(adapter, "_client")
+        assert getattr(adapter, "_client", None) is None
 
         with patch.object(adapter, "_create_client", return_value=MagicMock()) as mock_create:
             client = adapter.client
             mock_create.assert_called_once()
-            assert hasattr(adapter, "_client") and getattr(adapter, "_client", None) is not None
+            assert hasattr(adapter, "_client")
+            assert getattr(adapter, "_client", None) is not None
 
             client2 = adapter.client
             assert client is client2
@@ -84,12 +91,14 @@ class TestBaseAdapter:
             instructor_config=instructor_config,
         )
 
-        assert hasattr(adapter, "_instructor") and getattr(adapter, "_instructor", None) is None
+        assert hasattr(adapter, "_instructor")
+        assert getattr(adapter, "_instructor", None) is None
 
         with patch.object(adapter, "_with_instructor", return_value=MagicMock()) as mock_create:
             instructor_client = adapter.instructor
             mock_create.assert_called_once()
-            assert hasattr(adapter, "_instructor") and getattr(adapter, "_instructor", None) is not None
+            assert hasattr(adapter, "_instructor")
+            assert getattr(adapter, "_instructor", None) is not None
 
             instructor_client2 = adapter.instructor
             assert instructor_client is instructor_client2
@@ -256,7 +265,8 @@ class TestOpenAIAdapter:
                 )
             ]
 
-            assert len(results) == 3
+            expected_result_count = 3
+            assert len(results) == expected_result_count
             assert results == partial_results
 
 

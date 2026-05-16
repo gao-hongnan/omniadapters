@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,11 +23,13 @@ from omniadapters.core.models import (
     OpenAIProviderConfig,
 )
 from omniadapters.structify import create_adapter
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
 from omniadapters.structify.models import InstructorConfig
-from playground.structify.settings import ProviderFamily
+
+if TYPE_CHECKING:
+    from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+    from omniadapters.structify.adapters.gemini import GeminiAdapter
+    from omniadapters.structify.adapters.openai import OpenAIAdapter
+    from playground.structify.settings import ProviderFamily
 
 
 class OpenAICompletion(OpenAICompletionClientParams):

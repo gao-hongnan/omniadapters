@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import contextlib
+from typing import TYPE_CHECKING
+
 import instructor
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -203,7 +209,9 @@ def test_messages() -> list[dict[str, str]]:
         },
         {
             "role": "user",
-            "content": "Generate information about a person named Alice who is 25 years old and works as a software engineer.",
+            "content": (
+                "Generate information about a person named Alice who is 25 years old and works as a software engineer."
+            ),
         },
     ]
 
@@ -230,18 +238,16 @@ async def cleanup_adapter(adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdap
 
 
 @pytest.fixture(autouse=True)
-async def auto_cleanup_adapters(request: pytest.FixtureRequest):
+async def auto_cleanup_adapters(request: pytest.FixtureRequest) -> AsyncGenerator[None]:
     """Automatically cleanup adapters after each test."""
     yield
 
     for fixture_name in ["openai_adapter", "anthropic_adapter", "gemini_adapter"]:
         if fixture_name in request.fixturenames:
-            try:
+            with contextlib.suppress(Exception):
                 adapter = request.getfixturevalue(fixture_name)
                 if adapter:
                     await cleanup_adapter(adapter)
-            except (RuntimeError, Exception):
-                pass
 
 
 def pytest_configure(config: pytest.Config) -> None:

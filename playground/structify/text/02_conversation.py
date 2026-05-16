@@ -11,7 +11,9 @@
 # ]
 # ///
 
-"""```bash
+"""Tech support conversation demo.
+
+```bash
 uv run playground/structify/text/02_conversation.py --stream --provider openai
 ```
 """
@@ -20,12 +22,11 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from instructor.dsl.partial import PartialLiteralMixin
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
-    ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
 )
@@ -36,12 +37,22 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
 from playground.structify.text.settings import create_demo_adapter
 
+if TYPE_CHECKING:
+    from openai.types.chat import ChatCompletionMessageParam
+
+    from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+    from omniadapters.structify.adapters.gemini import GeminiAdapter
+    from omniadapters.structify.adapters.openai import OpenAIAdapter
+
 console = Console()
+
+ISSUE_ANALYSIS_TURN = 2
+PERFORMANCE_SOLUTION_PROMPT = (
+    "Based on the conversation, provide a detailed solution to fix the user's computer performance issue."
+)
+ISSUE_ANALYSIS_PROMPT = "Analyze the technical issue based on the conversation so far."
 
 
 class IssueAnalysis(BaseModel, PartialLiteralMixin):
@@ -232,6 +243,66 @@ async def stream_solution(
     )
 
 
+async def _get_issue_analysis(
+    adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
+    conversation_history: list[ChatCompletionMessageParam],
+    stream_mode: bool,
+) -> IssueAnalysis:
+    analysis_messages = [
+        *conversation_history,
+        ChatCompletionSystemMessageParam(role="system", content=ISSUE_ANALYSIS_PROMPT),
+    ]
+    if stream_mode:
+        return await stream_issue_analysis(adapter, analysis_messages)
+
+    console.print("\n[yellow]📊 Analyzing issue...[/yellow]")
+    issue_analysis: IssueAnalysis = await adapter.acreate(
+        messages=analysis_messages,
+        response_model=IssueAnalysis,
+    )
+
+    table = Table(title="Issue Analysis", show_header=False)
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="white")
+    table.add_row("Category", issue_analysis.problem_category)
+    table.add_row("Severity", issue_analysis.severity)
+    table.add_row("Confidence", f"{issue_analysis.confidence:.0%}")
+    table.add_row("Symptoms", "\n".join(f"• {s}" for s in issue_analysis.symptoms))
+    table.add_row("Possible Causes", "\n".join(f"• {c}" for c in issue_analysis.possible_causes))
+    console.print(table)
+
+    return issue_analysis
+
+
+async def _get_solution(
+    adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
+    conversation_history: list[ChatCompletionMessageParam],
+    stream_mode: bool,
+) -> Solution:
+    solution_messages = [
+        *conversation_history,
+        ChatCompletionSystemMessageParam(role="system", content=PERFORMANCE_SOLUTION_PROMPT),
+    ]
+    if stream_mode:
+        return await stream_solution(adapter, solution_messages)
+
+    console.print("\n[yellow]💡 Generating solution...[/yellow]")
+    solution: Solution = await adapter.acreate(messages=solution_messages, response_model=Solution)
+
+    console.print(Panel.fit("[bold]Recommended Solution[/bold]", style="green"))
+    console.print(f"[bold]Difficulty:[/bold] {solution.difficulty}")
+    console.print(f"[bold]Estimated Time:[/bold] {solution.estimated_time}")
+    console.print(f"[bold]Requires Restart:[/bold] {'Yes' if solution.requires_restart else 'No'}")
+    console.print("\n[bold]Steps to follow:[/bold]")
+    for idx, step in enumerate(solution.steps, 1):
+        console.print(f"  {idx}. {step}")
+    console.print("\n[bold]Success Indicators:[/bold]")
+    for indicator in solution.success_indicators:
+        console.print(f"  ✓ {indicator}")
+
+    return solution
+
+
 async def tech_support_conversation(provider: str, stream_mode: bool = False) -> None:
     console.print(
         Panel.fit(
@@ -267,7 +338,6 @@ async def tech_support_conversation(provider: str, stream_mode: bool = False) ->
 
         for i, user_message in enumerate(user_messages, 1):
             console.print(f"\n[cyan]User:[/cyan] {user_message}")
-
             conversation_history.append(ChatCompletionUserMessageParam(role="user", content=user_message))
 
             if stream_mode:
@@ -282,89 +352,15 @@ async def tech_support_conversation(provider: str, stream_mode: bool = False) ->
 
             conversation_history.append(ChatCompletionAssistantMessageParam(role="assistant", content=response.message))
 
-            if i == 2:
-                if stream_mode:
-                    issue_analysis = await stream_issue_analysis(
-                        adapter,
-                        conversation_history
-                        + [
-                            ChatCompletionSystemMessageParam(
-                                role="system",
-                                content="Analyze the technical issue based on the conversation so far.",
-                            )
-                        ],
-                    )
-                else:
-                    console.print("\n[yellow]📊 Analyzing issue...[/yellow]")
-                    issue_analysis = await adapter.acreate(
-                        messages=conversation_history
-                        + [
-                            ChatCompletionSystemMessageParam(
-                                role="system",
-                                content="Analyze the technical issue based on the conversation so far.",
-                            )
-                        ],
-                        response_model=IssueAnalysis,
-                    )
-
-                    table = Table(title="Issue Analysis", show_header=False)
-                    table.add_column("Field", style="cyan")
-                    table.add_column("Value", style="white")
-
-                    table.add_row("Category", issue_analysis.problem_category)
-                    table.add_row("Severity", issue_analysis.severity)
-                    table.add_row("Confidence", f"{issue_analysis.confidence:.0%}")
-                    table.add_row("Symptoms", "\n".join(f"• {s}" for s in issue_analysis.symptoms))
-                    table.add_row(
-                        "Possible Causes",
-                        "\n".join(f"• {c}" for c in issue_analysis.possible_causes),
-                    )
-
-                    console.print(table)
+            if i == ISSUE_ANALYSIS_TURN:
+                issue_analysis = await _get_issue_analysis(adapter, conversation_history, stream_mode)
 
             if not stream_mode and response.needs_more_info and response.follow_up_questions:
                 console.print("\n[dim]Follow-up questions:[/dim]")
                 for q in response.follow_up_questions:
                     console.print(f"  [dim]• {q}[/dim]")
 
-        if stream_mode:
-            solution = await stream_solution(
-                adapter,
-                conversation_history
-                + [
-                    ChatCompletionSystemMessageParam(
-                        role="system",
-                        content="Based on the conversation, provide a detailed solution to fix the user's computer performance issue.",
-                    )
-                ],
-            )
-        else:
-            console.print("\n[yellow]💡 Generating solution...[/yellow]")
-
-            solution = await adapter.acreate(
-                messages=conversation_history
-                + [
-                    ChatCompletionSystemMessageParam(
-                        role="system",
-                        content="Based on the conversation, provide a detailed solution to fix the user's computer performance issue.",
-                    )
-                ],
-                response_model=Solution,
-            )
-
-            console.print(Panel.fit("[bold]Recommended Solution[/bold]", style="green"))
-
-            console.print(f"[bold]Difficulty:[/bold] {solution.difficulty}")
-            console.print(f"[bold]Estimated Time:[/bold] {solution.estimated_time}")
-            console.print(f"[bold]Requires Restart:[/bold] {'Yes' if solution.requires_restart else 'No'}")
-
-            console.print("\n[bold]Steps to follow:[/bold]")
-            for i, step in enumerate(solution.steps, 1):
-                console.print(f"  {i}. {step}")
-
-            console.print("\n[bold]Success Indicators:[/bold]")
-            for indicator in solution.success_indicators:
-                console.print(f"  ✓ {indicator}")
+        await _get_solution(adapter, conversation_history, stream_mode)
 
         console.print("\n" + "=" * 50)
         console.print(
@@ -401,8 +397,6 @@ async def main() -> None:
     except ValueError as e:
         console.print(f"[red]Error: {e}[/red]")
         console.print("[dim]Please set the appropriate API key in your environment[/dim]")
-    except Exception as e:
-        console.print(f"[red]Unexpected error: {e}[/red]")
 
 
 if __name__ == "__main__":

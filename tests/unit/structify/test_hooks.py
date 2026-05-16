@@ -264,8 +264,7 @@ class TestAhookInstructor:
         mock_client.on = MagicMock()
         mock_client.off = MagicMock()
 
-        _trace: CompletionTrace[Any]
-        async with ahook_instructor(mock_client, enable=True) as _trace:
+        async with ahook_instructor(mock_client, enable=True) as _:
             registered_calls = mock_client.on.call_args_list
 
         deregistered_calls = mock_client.off.call_args_list
@@ -347,16 +346,14 @@ class TestHookIntegration:
         }
         handlers[HookName.COMPLETION_KWARGS](**kwargs)
 
-        response = {"id": "chatcmpl-123", "choices": [{"message": {"content": "Hello!"}}]}
+        response: Any = {"id": "chatcmpl-123", "choices": [{"message": {"content": "Hello!"}}]}
         handlers[HookName.COMPLETION_RESPONSE](response)
 
         assert trace.completion_kwargs == kwargs
         assert trace.messages == kwargs["messages"]
         assert trace.raw_response == response
-        error_after_response = trace.error
-        parse_error_after_response = trace.parse_error
-        assert error_after_response is None
-        assert parse_error_after_response is None
+        assert trace.error is None
+        assert trace.parse_error is None
 
     def test_hook_system_error_scenarios(self) -> None:
         mock_client = MagicMock()

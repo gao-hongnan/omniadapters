@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import asyncio
 from abc import ABC, abstractmethod
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 from typing import Any as AnyType
 
 import pytest
-from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, ValidationError
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+    from openai.types.chat import ChatCompletionMessageParam
 
 from omniadapters.structify.adapters.base import BaseAdapter
 from omniadapters.structify.hooks import CompletionTrace
@@ -18,10 +21,10 @@ from tests.conftest import ComplexTestModel, SimpleTestModel
 
 TAdapter = TypeVar("TAdapter", bound=BaseAdapter[Any, Any, Any])
 TModel = TypeVar("TModel", bound=BaseModel)
-TAdapterCov = TypeVar("TAdapterCov", bound=BaseAdapter[Any, Any, Any], covariant=True)
+TAdapterCov_co = TypeVar("TAdapterCov_co", bound=BaseAdapter[Any, Any, Any], covariant=True)
 
 
-class AdapterProtocol(Protocol[TAdapterCov]):
+class AdapterProtocol(Protocol[TAdapterCov_co]):
     """Protocol defining the contract all adapters must follow."""
 
     async def acreate(
@@ -101,9 +104,10 @@ class BaseAdapterIntegrationTest(ABC, Generic[TAdapter]):
             response_model=SimpleTestModel,
         )
 
+        _max_age = 150
         assert isinstance(result, SimpleTestModel)
         assert result.name
-        assert 0 <= result.age <= 150
+        assert 0 <= result.age <= _max_age
         assert result.description
 
     async def test_creation_with_hooks(
@@ -142,7 +146,9 @@ class BaseAdapterIntegrationTest(ABC, Generic[TAdapter]):
 
         assert len(partials) > 0
         final = partials[-1]
-        assert final.name and final.description and final.age is not None
+        assert final.name
+        assert final.description
+        assert final.age is not None
 
     async def test_streaming_with_hooks(
         self,
@@ -190,7 +196,10 @@ class BaseAdapterIntegrationTest(ABC, Generic[TAdapter]):
             },
             {
                 "role": "user",
-                "content": "Create data with title='Test Content', rating=8.5, tags=['test', 'demo'], summary='A test summary', is_recommended=true",
+                "content": (
+                    "Create data with title='Test Content', rating=8.5, tags=['test', 'demo'], "
+                    "summary='A test summary', is_recommended=true"
+                ),
             },
         ]
 
@@ -201,7 +210,8 @@ class BaseAdapterIntegrationTest(ABC, Generic[TAdapter]):
 
         assert isinstance(result, ComplexTestModel)
         assert result.title
-        assert 0.0 <= result.rating <= 10.0
+        _max_rating = 10.0
+        assert 0.0 <= result.rating <= _max_rating
         assert isinstance(result.tags, list)
         assert result.summary
         assert isinstance(result.is_recommended, bool)
@@ -241,7 +251,8 @@ class BaseAdapterIntegrationTest(ABC, Generic[TAdapter]):
         successful = [r for r in results if isinstance(r, SimpleTestModel)]
         errors = [r for r in results if isinstance(r, Exception)]
 
-        assert len(successful) >= 3
+        _min_successful = 3
+        assert len(successful) >= _min_successful
         for error in errors:
             assert not isinstance(error, AttributeError)
             assert not isinstance(error, TypeError)
@@ -258,14 +269,15 @@ class BaseAdapterIntegrationTest(ABC, Generic[TAdapter]):
         )
 
         partial_count = 0
+        _early_cancel_after = 2
         async for _partial in stream_iter:
             partial_count += 1
-            if partial_count >= 2:
+            if partial_count >= _early_cancel_after:
                 break
 
         # NOTE: AsyncIterator doesn't have aclose method in standard typing
         if hasattr(stream_iter, "aclose"):
-            await stream_iter.aclose()  # type: ignore
+            await stream_iter.aclose()  # type: ignore[union-attr]
 
     async def test_error_propagation(
         self,
@@ -326,7 +338,8 @@ class BaseAdapterIntegrationTest(ABC, Generic[TAdapter]):
             response_model=SimpleTestModel,
         ):
             consumed += 1
-            if consumed > 100:
+            _max_stream_partials = 100
+            if consumed > _max_stream_partials:
                 pytest.fail("Stream produced too many partials - possible memory issue")
 
         assert consumed > 0

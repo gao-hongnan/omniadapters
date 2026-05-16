@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Any, Protocol
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from jinja2.exceptions import TemplateNotFound, UndefinedError
 
 type PromptVariables = dict[str, Any]
@@ -21,7 +21,7 @@ class JinjaPromptRenderer:
     def __init__(self, template_base_path: str) -> None:
         self._jinja_env = Environment(
             loader=FileSystemLoader(template_base_path),
-            autoescape=False,
+            autoescape=select_autoescape([]),
         )
 
     def render(self, template_path: str, variables: PromptVariables | None = None) -> str:
@@ -38,5 +38,5 @@ class JinjaPromptRenderer:
 
 @lru_cache(maxsize=1)
 def get_prompt_renderer(base_path: str) -> JinjaPromptRenderer:
-    """Provides a cached, singleton instance of the PromptRenderer."""
+    """Return a cached singleton instance of the PromptRenderer."""
     return JinjaPromptRenderer(base_path)

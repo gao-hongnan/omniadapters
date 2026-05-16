@@ -119,9 +119,12 @@ class TestClientParams:
 
         assert params.model == "gpt-4"
         data = params.model_dump()
-        assert data["temperature"] == 0.7
-        assert data["max_tokens"] == 1000
-        assert data["top_p"] == 0.9
+        expected_temperature = 0.7
+        expected_max_tokens = 1000
+        expected_top_p = 0.9
+        assert data["temperature"] == expected_temperature
+        assert data["max_tokens"] == expected_max_tokens
+        assert data["top_p"] == expected_top_p
 
     def test_client_params_exclude_fields(self) -> None:
         params = OpenAICompletionClientParams(model="gpt-4")
@@ -261,7 +264,8 @@ class TestInstructorConfig:
 
         assert config.mode == instructor.Mode.TOOLS
         data = config.model_dump()
-        assert data["max_retries"] == 3
+        expected_max_retries = 3
+        assert data["max_retries"] == expected_max_retries
         assert data["validation_context"]["test"] is True
 
     def test_instructor_config_validation(self) -> None:

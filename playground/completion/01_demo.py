@@ -1,325 +1,164 @@
-"""Completion Adapter Pattern Demo - Multi-Provider LLM Completions.
+"""Multi-provider completion smoke-test demo.
 
+Examples:
 ```bash
 uv run playground/completion/01_demo.py --provider all
-
-uv run playground/completion/01_demo.py --provider openai
-uv run playground/completion/01_demo.py --provider anthropic
-uv run playground/completion/01_demo.py --provider gemini
-uv run playground/completion/01_demo.py --provider azure-openai
-
-uv run playground/completion/01_demo.py --prompt "Explain quantum computing"
-uv run playground/completion/01_demo.py --provider anthropic --prompt "Tell me a joke"
-
-uv run playground/completion/01_demo.py --stream
-uv run playground/completion/01_demo.py --provider openai --stream
-uv run playground/completion/01_demo.py --provider gemini --prompt "What is AI?" --stream
-
-uv run playground/completion/01_demo.py --trace --provider all
 uv run playground/completion/01_demo.py --provider openai --trace
-uv run playground/completion/01_demo.py --provider openai --prompt "Hello world" --stream --trace
+uv run playground/completion/01_demo.py --provider anthropic --stream
+uv run playground/completion/01_demo.py --provider gemini --prompt "Say hello in one sentence"
 ```
+
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-from typing import TYPE_CHECKING, Generic, Literal, TypeVar, assert_never
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from rich.console import Console, Group
+from _shared import (
+    CompletionDemoAdapter,
+    PlaygroundConfigurationError,
+    ProviderName,
+    console,
+    create_provider_adapter,
+    parse_provider_selection,
+    provider_display_name,
+    render_completion_error,
+    render_configuration_error,
+    render_unexpected_error,
+    response_panel,
+    selected_providers,
+    streaming_text,
+    trace_panel,
+)
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from rich.syntax import Syntax
-from rich.text import Text
 
-from omniadapters.completion.factory import create_adapter
-from omniadapters.core.models import (
-    AnthropicCompletionClientParams,
-    AnthropicProviderConfig,
-    CompletionResponse,
-    GeminiCompletionClientParams,
-    GeminiProviderConfig,
-    OpenAICompletionClientParams,
-    OpenAIProviderConfig,
-)
+from omniadapters.completion.errors import CompletionAPIError, CompletionHTTPError
 
 if TYPE_CHECKING:
-    from anthropic.types import Message
-    from google.genai.types import GenerateContentResponse
-    from openai.types.chat import ChatCompletion
-
-    from omniadapters.completion.adapters.anthropic import AnthropicAdapter
-    from omniadapters.completion.adapters.azure_openai import AzureOpenAIAdapter
-    from omniadapters.completion.adapters.gemini import GeminiAdapter
-    from omniadapters.completion.adapters.openai import OpenAIAdapter
     from omniadapters.core.types import MessageParam
-
-console = Console()
-
-
-class OpenAICompletion(OpenAICompletionClientParams):
-    model: str = Field(default="gpt-4o-mini")
-    temperature: float = Field(default=0.7)
-    max_completion_tokens: int = Field(default=1000)
-
-
-class AnthropicCompletion(AnthropicCompletionClientParams):
-    model: str = Field(default="claude-3-5-haiku-20241022")
-    temperature: float = Field(default=0.7)
-    max_tokens: int = Field(default=1000)
-
-
-class GeminiCompletion(GeminiCompletionClientParams):
-    model: str = Field(default="gemini-2.0-flash-exp", exclude=True)
-    temperature: float = Field(default=1.0)
-    max_output_tokens: int = Field(default=1000)
-
-
-P = TypeVar("P", OpenAIProviderConfig, AnthropicProviderConfig, GeminiProviderConfig)
-C = TypeVar("C", OpenAICompletion, AnthropicCompletion, GeminiCompletion)
-
-
-class ProviderFamily(BaseModel, Generic[P, C]):
-    provider: P
-    completion: C
-
-
-class ModelFamily(BaseModel):
-    """Container for all provider configurations."""
-
-    openai: ProviderFamily[OpenAIProviderConfig, OpenAICompletion]
-    anthropic: ProviderFamily[AnthropicProviderConfig, AnthropicCompletion]
-    gemini: ProviderFamily[GeminiProviderConfig, GeminiCompletion]
-
-    def create_adapter(
-        self, provider: Literal["openai", "anthropic", "gemini"]
-    ) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
-        """Create adapter for specified provider."""
-        match provider:
-            case "openai":
-                return create_adapter(provider_config=self.openai.provider, completion_params=self.openai.completion)
-            case "anthropic":
-                return create_adapter(
-                    provider_config=self.anthropic.provider, completion_params=self.anthropic.completion
-                )
-            case "gemini":
-                return create_adapter(provider_config=self.gemini.provider, completion_params=self.gemini.completion)
-            case _:
-                assert_never(provider)
-
-
-class Settings(BaseSettings):
-    models: ModelFamily
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        env_nested_delimiter="__",
-    )
-
-
-settings = Settings(_env_file="playground/completion/.env")  # pyright: ignore[reportCallIssue]
-
-
-def create_response_panel(
-    response: CompletionResponse[ChatCompletion]
-    | CompletionResponse[Message]
-    | CompletionResponse[GenerateContentResponse],
-    provider_name: str,
-) -> Panel:
-    """Create a formatted panel for completion response."""
-    content = Text(response.content or "")
-
-    metadata = []
-    if response.model:
-        metadata.append(f"Model: {response.model}")
-    if response.usage:
-        metadata.append(
-            f"Tokens: {response.usage.input_tokens} input + "
-            f"{response.usage.output_tokens} output = "
-            f"{response.usage.total_tokens} total"
-        )
-
-    if metadata:
-        content.append("\n\n", style="dim")
-        content.append(" | ".join(metadata), style="dim italic")
-
-    return Panel(
-        content,
-        title=f"💬 {provider_name} Response",
-        border_style="green",
-        padding=(1, 2),
-    )
-
-
-def format_streaming_text(content: str, chunk_count: int) -> Text:
-    """Format streaming text with chunk counter."""
-    text = Text()
-    text.append(content, style="green")
-    text.append(f"\n\n[dim]Chunks received: {chunk_count}[/dim]", style="dim")
-    return text
-
-
-def display_trace_info(
-    response: CompletionResponse[ChatCompletion]
-    | CompletionResponse[Message]
-    | CompletionResponse[GenerateContentResponse],
-) -> None:
-    """Display trace information about the raw response."""
-    raw_type = type(response.raw_response).__name__
-    json_str = response.raw_response.model_dump_json(indent=2)
-
-    json_display = Syntax(
-        code=json_str,
-        lexer="json",
-        theme="monokai",
-        line_numbers=False,
-        word_wrap=True,
-    )
-
-    renderables: list[Syntax | Text] = [json_display]
-
-    if response.usage:
-        usage_str = response.usage.model_dump_json(indent=2)
-        usage_display = Syntax(
-            code=usage_str,
-            lexer="json",
-            theme="monokai",
-            line_numbers=False,
-            word_wrap=True,
-        )
-        renderables.extend([Text("\n"), usage_display])
-
-    console.print(
-        Panel(
-            Group(*renderables),
-            title=f"📊 [bold cyan]Trace Information - {raw_type} and Usage[/bold cyan]",
-            border_style="cyan",
-            padding=(1, 2),
-            expand=False,
-        )
-    )
 
 
 async def generate_completion(
-    adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter | AzureOpenAIAdapter,
+    adapter: CompletionDemoAdapter,
     messages: list[MessageParam],
-    provider_name: str,
-    show_trace: bool = False,
+    provider: ProviderName,
+    *,
+    show_trace: bool,
 ) -> None:
-    """Generate a normal (non-streaming) completion."""
-    console.print(Panel.fit(f"🤖 {provider_name} Example", style="bold blue"))
+    """Generate and display one non-streaming completion."""
+    display_name = provider_display_name(provider)
+    console.print(Panel.fit(f"{display_name} completion", style="bold blue"))
 
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         transient=True,
+        console=console,
     ) as progress:
-        progress.add_task(description=f"Getting response from {provider_name}...", total=None)
-
+        progress.add_task(description=f"Waiting for {display_name}...", total=None)
         response = await adapter.agenerate(messages=messages)
 
-    console.print(create_response_panel(response, provider_name))
+    console.print(response_panel(response, provider))
 
     if show_trace:
-        display_trace_info(response)
+        console.print(trace_panel(response))
 
 
-async def generate_completion_streaming(
-    adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter | AzureOpenAIAdapter,
+async def generate_streaming_completion(
+    adapter: CompletionDemoAdapter,
     messages: list[MessageParam],
-    provider_name: str,
+    provider: ProviderName,
 ) -> None:
-    """Generate a streaming completion with real-time updates."""
-    console.print(Panel.fit(f"🤖 {provider_name} Streaming Example", style="bold blue"))
-    console.print("[dim]Streaming tokens...[/dim]\n")
+    """Generate and display one streaming completion."""
+    display_name = provider_display_name(provider)
+    console.print(Panel.fit(f"{display_name} streaming completion", style="bold blue"))
 
     chunk_count = 0
     full_content = ""
+    stream = await adapter.agenerate(messages=messages, stream=True)
 
-    with Live(console=console, refresh_per_second=30, transient=False) as live:
-        stream = await adapter.agenerate(messages=messages, stream=True)
+    with Live(console=console, refresh_per_second=8, transient=False) as live:
         async for chunk in stream:
             chunk_count += 1
-            if chunk.content:
-                full_content += chunk.content
+            full_content += chunk.content
+            live.update(streaming_text(full_content, chunk_count))
 
-            formatted = format_streaming_text(full_content, chunk_count)
-            live.update(formatted)
-
-            await asyncio.sleep(0.01)
-
-    console.print(f"\n[green]✓ Streaming complete! Received {chunk_count} chunks[/green]")
+    console.print(f"[green]Streaming complete. Received {chunk_count} chunks.[/green]")
 
 
-def create_demo_adapter(
-    provider: Literal["openai", "anthropic", "gemini"],
-) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter | AzureOpenAIAdapter:
-    """Create an adapter for the specified provider."""
-    return settings.models.create_adapter(provider)
+async def run_provider(
+    provider: ProviderName,
+    messages: list[MessageParam],
+    *,
+    stream: bool,
+    trace: bool,
+) -> None:
+    """Run the demo for one provider and always close its adapter."""
+    adapter = create_provider_adapter(provider)
+    try:
+        if stream:
+            await generate_streaming_completion(adapter, messages, provider)
+        else:
+            await generate_completion(adapter, messages, provider, show_trace=trace)
+    finally:
+        await adapter.aclose()
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="Multi-provider LLM completion demo")
+    """Parse CLI options and run completion smoke tests."""
+    parser = argparse.ArgumentParser(description="Multi-provider LLM completion smoke-test demo")
     parser.add_argument(
         "--provider",
         choices=["openai", "anthropic", "gemini", "all"],
         default="all",
-        help="LLM provider to use (default: all)",
+        help="LLM provider to use",
     )
     parser.add_argument(
         "--prompt",
-        default="Explain recursion in programming in 2 sentences.",
-        help="Prompt to send (default: Explain recursion)",
+        default="Explain recursion in programming in 20 concise sentences.",
+        help="Prompt to send",
     )
-    parser.add_argument("--trace", action="store_true", help="Show trace information")
+    parser.add_argument("--trace", action="store_true", help="Show raw vendor response and normalized usage")
     parser.add_argument("--stream", action="store_true", help="Use streaming mode")
     args = parser.parse_args()
 
-    console.print(
-        Panel.fit(
-            "🚀 [bold]Completion Demo[/bold] 🚀\n[dim]Unified interface for multiple LLM providers[/dim]",
-            style="bold green",
-        )
-    )
-
+    selection = parse_provider_selection(args.provider)
+    providers = selected_providers(selection)
     messages: list[MessageParam] = [
-        {"role": "system", "content": "Always start your response with 'Hello, world!'"},
+        {"role": "system", "content": "Answer clearly and keep the response compact."},
         {"role": "user", "content": args.prompt},
     ]
 
-    console.print(f"\n📝 [yellow]Prompt:[/yellow] {args.prompt}\n")
-
-    providers: list[Literal["openai", "anthropic", "gemini"]] = (
-        ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider.replace("-", " ").lower()]
+    console.print(
+        Panel.fit(
+            "Completion playground smoke test\n[dim]Unified adapters with structured error rendering[/dim]",
+            border_style="green",
+        )
     )
+    console.print(f"[yellow]Prompt:[/yellow] {args.prompt}\n")
 
-    for i, provider in enumerate(providers):
+    for index, provider in enumerate(providers):
         try:
-            adapter = create_demo_adapter(provider)
-            try:
-                if args.stream:
-                    await generate_completion_streaming(adapter, messages, provider.replace("-", " ").title())
-                else:
-                    await generate_completion(
-                        adapter, messages, provider.replace("-", " ").title(), show_trace=args.trace
-                    )
-            finally:
-                await adapter.aclose()
-        except Exception as e:  # noqa: BLE001
-            console.print(f"[red]❌ Error with {provider}: {e}[/red]")
+            await run_provider(provider, messages, stream=args.stream, trace=args.trace)
+        except CompletionHTTPError as error:
+            render_completion_error(error)
+        except CompletionAPIError as error:
+            render_completion_error(error)
+        except PlaygroundConfigurationError as error:
+            render_configuration_error(error)
 
-        if i < len(providers) - 1:
-            console.print("\n" + "=" * 50 + "\n")
-
-    console.print("\n" + "=" * 50)
-    console.print(Panel.fit("✅ [bold green]Demo Complete![/bold green]", style="green"))
+        if index < len(providers) - 1:
+            console.rule(style="dim")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Completion demo interrupted.[/yellow]")
+    except Exception as error:  # noqa: BLE001 - CLI boundary renders unexpected smoke-test failures.
+        render_unexpected_error(error)

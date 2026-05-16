@@ -67,7 +67,7 @@ def load_questions(file_path: str | Path) -> list[UserQuery]:
 
 
 async def main() -> None:
-    """Main async function to run verifications."""
+    """Run verifications using the CoVe pipeline."""
     parser = argparse.ArgumentParser(description="Run verification on text pairs")
     parser.add_argument(
         "--input",
@@ -118,8 +118,8 @@ async def main() -> None:
 
         if args.output:
             output_path = Path(args.output)
-            with open(output_path, "w", encoding="utf-8") as f:
-                json.dump(batch_result.model_dump(), f, indent=4, ensure_ascii=False)
+            output_json = json.dumps(batch_result.model_dump(), indent=4, ensure_ascii=False)
+            await asyncio.to_thread(output_path.write_text, output_json, "utf-8")
             print(f"\nResults saved to {output_path}")
     else:
         print("--- Running CoVe Verification ---")

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from pydantic import BaseModel, model_validator
 from pydantic_settings import SettingsConfigDict
 from pydanticonf.settings import BaseSettingsWithYaml
 
-from omniadapters.core.models import CompletionClientParams, ProviderConfig
-from omniadapters.structify.models import InstructorConfig
+if TYPE_CHECKING:
+    from omniadapters.core.models import CompletionClientParams, ProviderConfig
+    from omniadapters.structify.models import InstructorConfig
 
 
 class PromptsConfig(BaseModel):
@@ -33,7 +34,8 @@ class ProviderAgnosticAgent(BaseModel):
     def validate_provider_match(self) -> Self:
         """Ensure provider types match."""
         if self.provider_config.provider != self.completion_params.provider:
-            raise ValueError(f"Provider mismatch: {self.provider_config.provider} != {self.completion_params.provider}")
+            msg = f"Provider mismatch: {self.provider_config.provider} != {self.completion_params.provider}"
+            raise ValueError(msg)
         return self
 
 

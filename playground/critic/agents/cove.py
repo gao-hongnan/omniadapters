@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, Field, computed_field
 
 from omniadapters.core.models import (
@@ -15,9 +14,13 @@ from omniadapters.core.models import (
     OpenAIProviderConfig,
 )
 from omniadapters.structify import create_adapter
-from omniadapters.structify.adapters.anthropic import AnthropicAdapter
-from omniadapters.structify.adapters.gemini import GeminiAdapter
-from omniadapters.structify.adapters.openai import OpenAIAdapter
+
+if TYPE_CHECKING:
+    from openai.types.chat import ChatCompletionMessageParam
+
+    from omniadapters.structify.adapters.anthropic import AnthropicAdapter
+    from omniadapters.structify.adapters.gemini import GeminiAdapter
+    from omniadapters.structify.adapters.openai import OpenAIAdapter
 
 from ..config.settings import (
     CoVeVerifierConfig,
@@ -54,7 +57,7 @@ class CoVeOrchestrator(MaybeOrchestrator[CoVeVerifierConfig, CoVeCandidate]):
     config: CoVeVerifierConfig
     _prompt_renderer: JinjaPromptRenderer
 
-    def __init__(self, config: CoVeVerifierConfig):
+    def __init__(self, config: CoVeVerifierConfig) -> None:
         super().__init__(config=config)
         self._prompt_renderer = get_prompt_renderer(self.config.drafter.prompts.base_path)
 
@@ -104,7 +107,8 @@ class CoVeOrchestrator(MaybeOrchestrator[CoVeVerifierConfig, CoVeCandidate]):
                     instructor_config=agent_config.instructor_config,
                 )
             case _:
-                raise ValueError(f"Unsupported provider combination: {agent_config.provider_config.provider}")
+                msg = f"Unsupported provider combination: {agent_config.provider_config.provider}"
+                raise ValueError(msg)
 
     async def _run_drafter_phase(self, user_query: UserQuery) -> DraftResponse:
         messages = self._build_messages(self.config.drafter.prompts, user_query.model_dump())
@@ -180,5 +184,8 @@ class CoVeOrchestrator(MaybeOrchestrator[CoVeVerifierConfig, CoVeCandidate]):
             verification_questions=questions_obj.questions,
             verification_answers=[f"{fc.answer}: {fc.brief_explanation}" for fc in fact_check_answers],
             revision_made=judge_verdict.revision_made,
-            verdict=f"{'Revised' if judge_verdict.revision_made else 'Confirmed'}: {'Aligned' if judge_verdict.is_aligned else 'Not aligned'}",
+            verdict=(
+                f"{'Revised' if judge_verdict.revision_made else 'Confirmed'}: "
+                f"{'Aligned' if judge_verdict.is_aligned else 'Not aligned'}"
+            ),
         )

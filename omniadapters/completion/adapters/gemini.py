@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
+from pydantic_ai.usage import RequestUsage
 
 from ...core.constants import GEMINI_IMPORT_ERROR
 
 try:
     from google import genai
     from google.genai.types import ContentOrDict, GenerateContentConfig, GenerateContentResponse
-    from google.genai.types import GenerateContentResponseUsageMetadata as GeminiUsage
     from instructor.processing.multimodal import extract_genai_multimodal_content
     from instructor.providers.gemini.utils import (
         convert_to_genai_messages,
@@ -21,23 +21,9 @@ try:
 except ImportError as e:
     raise ImportError(GEMINI_IMPORT_ERROR) from e
 
-from ...core.models import CompletionResponse, GeminiProviderConfig, StreamChunk, Usage
-from ...core.usage_converter import to_usage
+from ...core.models import CompletionResponse, GeminiProviderConfig, StreamChunk
 from .._map_api_errors import _map_google_errors
 from .base import BaseAdapter
-
-
-@to_usage.register(GeminiUsage)
-def _(usage: GeminiUsage) -> Usage:
-    return Usage(
-        input_tokens=usage.prompt_token_count or 0,
-        output_tokens=usage.candidates_token_count or 0,
-        total_tokens=usage.total_token_count or 0,
-        cached_input_tokens=usage.cached_content_token_count,
-        thinking_tokens=usage.thoughts_token_count,
-        tool_use_tokens=usage.tool_use_prompt_token_count,
-    )
-
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -147,10 +133,26 @@ class GeminiAdapter(
 
         model = response.model_version or str(self.completion_params.model)
 
+        # NOTE: genai-prices' google extractor reads camelCase keys
+        # (usageMetadata.promptTokenCount, modelVersion, ...), so dump with
+        # by_alias=True. The default snake_case dump yields an all-zero usage.
+        usage = (
+            RequestUsage.extract(
+                response.model_dump(mode="python", by_alias=True),
+                provider="google",
+                provider_url="https://generativelanguage.googleapis.com",
+                provider_fallback="google",
+                api_flavor="default",
+            )
+            if response.usage_metadata
+            else None
+        )
+
         return CompletionResponse[GenerateContentResponse](
             content=content,
             model=model,
-            usage=to_usage(response.usage_metadata) if response.usage_metadata else None,
+            provider_id="google",
+            usage=usage,
             raw_response=response,
         )
 

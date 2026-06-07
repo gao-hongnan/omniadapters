@@ -3,41 +3,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
+from pydantic_ai.usage import RequestUsage
 
 from ...core.constants import OPENAI_IMPORT_ERROR
 
 try:
     from openai import AsyncOpenAI
-    from openai.types import CompletionUsage as OpenAIUsage
     from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam
 except ImportError as e:
     raise ImportError(OPENAI_IMPORT_ERROR) from e
 
-from ...core.models import CompletionResponse, OpenAIProviderConfig, StreamChunk, Usage
-from ...core.usage_converter import to_usage
+from ...core.models import CompletionResponse, OpenAIProviderConfig, StreamChunk
 from .._map_api_errors import _map_openai_errors
 from .base import BaseAdapter
-
-
-@to_usage.register(OpenAIUsage)
-def _(usage: OpenAIUsage) -> Usage:
-    cached_input_tokens = None
-    thinking_tokens = None
-
-    if usage.prompt_tokens_details:
-        cached_input_tokens = usage.prompt_tokens_details.cached_tokens
-
-    if usage.completion_tokens_details:
-        thinking_tokens = usage.completion_tokens_details.reasoning_tokens
-
-    return Usage(
-        input_tokens=usage.prompt_tokens,
-        output_tokens=usage.completion_tokens,
-        total_tokens=usage.total_tokens,
-        cached_input_tokens=cached_input_tokens,
-        thinking_tokens=thinking_tokens,
-    )
-
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -94,10 +72,23 @@ class OpenAIAdapter(
     def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
         choice = response.choices[0] if response.choices else None
 
+        usage = (
+            RequestUsage.extract(
+                response.model_dump(mode="python"),
+                provider="openai",
+                provider_url="https://api.openai.com",
+                provider_fallback="openai",
+                api_flavor="chat",
+            )
+            if response.usage
+            else None
+        )
+
         return CompletionResponse[ChatCompletion](
             content=choice.message.content or "" if choice else "",
             model=response.model,
-            usage=to_usage(response.usage) if response.usage else None,
+            provider_id="openai",
+            usage=usage,
             raw_response=response,
         )
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from instructor import Mode
+from pydantic_ai.usage import RequestUsage
 
 from ...core.constants import ANTHROPIC_IMPORT_ERROR
 
@@ -12,25 +13,12 @@ try:
     from anthropic import AsyncAnthropic
     from anthropic.types import Message, RawMessageStreamEvent
     from anthropic.types import MessageParam as AnthropicMessageParam
-    from anthropic.types import Usage as AnthropicUsage
 except ImportError as e:
     raise ImportError(ANTHROPIC_IMPORT_ERROR) from e
 
-from ...core.models import AnthropicProviderConfig, CompletionResponse, StreamChunk, Usage
-from ...core.usage_converter import to_usage
+from ...core.models import AnthropicProviderConfig, CompletionResponse, StreamChunk
 from .._map_api_errors import _map_anthropic_errors
 from .base import BaseAdapter
-
-
-@to_usage.register(AnthropicUsage)
-def _(usage: AnthropicUsage) -> Usage:
-    return Usage(
-        input_tokens=usage.input_tokens,
-        output_tokens=usage.output_tokens,
-        total_tokens=usage.input_tokens + usage.output_tokens,
-        cached_input_tokens=getattr(usage, "cache_read_input_tokens", None),
-    )
-
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -92,10 +80,23 @@ class AnthropicAdapter(
                 if isinstance(text_val, str):
                     content += text_val
 
+        usage = (
+            RequestUsage.extract(
+                response.model_dump(mode="python"),
+                provider="anthropic",
+                provider_url="https://api.anthropic.com",
+                provider_fallback="anthropic",
+                api_flavor="default",
+            )
+            if response.usage
+            else None
+        )
+
         return CompletionResponse[Message](
             content=content,
             model=response.model,
-            usage=to_usage(response.usage) if response.usage else None,
+            provider_id="anthropic",
+            usage=usage,
             raw_response=response,
         )
 

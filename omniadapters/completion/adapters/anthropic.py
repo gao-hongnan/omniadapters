@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from instructor import Mode
-from pydantic_ai.usage import RequestUsage
 
 from ...core.constants import ANTHROPIC_IMPORT_ERROR
 
@@ -16,6 +15,8 @@ try:
 except ImportError as e:
     raise ImportError(ANTHROPIC_IMPORT_ERROR) from e
 
+from ...core.cost import GENAI_PRICES_PROFILE, UsageExtractionSpec
+from ...core.enums import Provider
 from ...core.models import AnthropicProviderConfig, CompletionResponse, StreamChunk
 from .._map_api_errors import _map_anthropic_errors
 from .base import BaseAdapter
@@ -35,6 +36,8 @@ class AnthropicAdapter(
         RawMessageStreamEvent,
     ]
 ):
+    _usage_spec: ClassVar[UsageExtractionSpec] = GENAI_PRICES_PROFILE[Provider.ANTHROPIC]
+
     @property
     def instructor_mode(self) -> Mode:
         return Mode.ANTHROPIC_TOOLS
@@ -80,22 +83,12 @@ class AnthropicAdapter(
                 if isinstance(text_val, str):
                     content += text_val
 
-        usage = (
-            RequestUsage.extract(
-                response.model_dump(mode="python"),
-                provider="anthropic",
-                provider_url="https://api.anthropic.com",
-                provider_fallback="anthropic",
-                api_flavor="default",
-            )
-            if response.usage
-            else None
-        )
+        usage = self._extract_usage(response, self._usage_spec, present=response.usage)
 
         return CompletionResponse[Message](
             content=content,
             model=response.model,
-            provider_id="anthropic",
+            provider_id=self._usage_spec.provider,
             usage=usage,
             raw_response=response,
         )

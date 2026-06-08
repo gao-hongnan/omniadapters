@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from instructor import Mode
-from pydantic_ai.usage import RequestUsage
 
 from ...core.constants import OPENAI_IMPORT_ERROR
 
@@ -13,6 +12,8 @@ try:
 except ImportError as e:
     raise ImportError(OPENAI_IMPORT_ERROR) from e
 
+from ...core.cost import GENAI_PRICES_PROFILE, UsageExtractionSpec
+from ...core.enums import Provider
 from ...core.models import CompletionResponse, OpenAIProviderConfig, StreamChunk
 from .._map_api_errors import _map_openai_errors
 from .base import BaseAdapter
@@ -32,6 +33,8 @@ class OpenAIAdapter(
         ChatCompletionChunk,
     ]
 ):
+    _usage_spec: ClassVar[UsageExtractionSpec] = GENAI_PRICES_PROFILE[Provider.OPENAI]
+
     @property
     def instructor_mode(self) -> Mode:
         return Mode.TOOLS
@@ -72,22 +75,12 @@ class OpenAIAdapter(
     def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
         choice = response.choices[0] if response.choices else None
 
-        usage = (
-            RequestUsage.extract(
-                response.model_dump(mode="python"),
-                provider="openai",
-                provider_url="https://api.openai.com",
-                provider_fallback="openai",
-                api_flavor="chat",
-            )
-            if response.usage
-            else None
-        )
+        usage = self._extract_usage(response, self._usage_spec, present=response.usage)
 
         return CompletionResponse[ChatCompletion](
             content=choice.message.content or "" if choice else "",
             model=response.model,
-            provider_id="openai",
+            provider_id=self._usage_spec.provider,
             usage=usage,
             raw_response=response,
         )

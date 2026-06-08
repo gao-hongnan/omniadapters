@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, overload
 
 from instructor import Mode, handle_response_model
 
+from ...core.cost import extract_usage
 from ...core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
 from ...core.types import (
     ClientMessageT,
@@ -18,6 +19,9 @@ from ...core.types import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from pydantic_ai.usage import RequestUsage
+
+    from ...core.cost import UsageExtractionSpec
     from ...core.models import CompletionClientParams, CompletionResponse, StreamChunk
     from ...core.types import MessageParam
 
@@ -122,6 +126,25 @@ class BaseAdapter(ABC, Generic[ProviderConfigT, ClientT, ClientMessageT, ClientR
         stream: bool = False,
         **kwargs: Any,
     ) -> ClientResponseT | AsyncIterator[StreamChunkT]: ...
+
+    def _extract_usage(
+        self,
+        response: ClientResponseT,
+        spec: UsageExtractionSpec,
+        *,
+        present: object,
+    ) -> RequestUsage | None:
+        """Extract usage from ``response`` via ``spec``, or ``None`` when absent.
+
+        ``present`` is the provider's already-checked usage attribute (e.g.
+        ``response.usage`` or ``response.usage_metadata``). Passing the *value*,
+        not the attribute name, keeps that guard statically type-checked at the
+        adapter call site. The dump honors ``spec.by_alias`` (the google catalog
+        reads camelCase, so a snake_case dump would yield an all-zero usage).
+        """
+        if not present:
+            return None
+        return extract_usage(response.model_dump(mode="python", by_alias=spec.by_alias), spec)
 
     @abstractmethod
     def _to_unified_response(self, response: ClientResponseT) -> CompletionResponse[ClientResponseT]: ...

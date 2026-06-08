@@ -23,10 +23,100 @@ from genai_prices import calc_price
 from genai_prices.types import PriceCalculation
 from pydantic_ai.usage import RequestUsage, RunUsage
 
+from .enums import Provider
+
 if TYPE_CHECKING:
     from datetime import datetime
 
     from .models import CompletionResponse
+
+
+@dataclass(frozen=True, slots=True)
+class UsageExtractionSpec:
+    """The genai-prices coordinates needed to extract usage from a provider dump.
+
+    These values are class-invariant per provider -- they never change between
+    calls -- so they are declared once in :data:`GENAI_PRICES_PROFILE` rather than
+    hardcoded inline in each adapter's ``_to_unified_response``.
+
+    Attributes
+    ----------
+    provider
+        The genai-prices provider id (e.g. ``"openai"``, ``"google"``). Stored on
+        :attr:`CompletionResponse.provider_id` and passed to :func:`compute_cost`.
+        Typed ``str`` deliberately: this is genai-prices' vocabulary, which differs
+        from the omniadapters :class:`~omniadapters.core.enums.Provider` enum
+        (Gemini -> ``"google"``, Azure -> ``"azure"``) and is intentionally NOT
+        pinned to the upstream ``ProviderID`` literal, which can drift across
+        genai-prices versions. The exact values are pinned by the registry test.
+    provider_url
+        Provider base URL genai-prices matches against its catalog ``api_pattern``
+        to resolve the provider. Azure overrides this per-call with its configured
+        endpoint.
+    provider_fallback
+        Fallback provider id used when ``provider`` cannot be resolved (Azure falls
+        back to ``"openai"`` since it carries the OpenAI usage shape).
+    api_flavor
+        genai-prices extractor flavor. OpenAI/Azure require ``"chat"`` (they have
+        no ``"default"`` extractor); Anthropic/Google use ``"default"``.
+    by_alias
+        Whether the SDK response must be dumped with ``by_alias=True`` for
+        genai-prices to read it. Gemini's google catalog reads camelCase keys, so
+        its snake_case dump yields an all-zero usage unless aliased.
+
+    """
+
+    provider: str
+    provider_url: str
+    provider_fallback: str
+    api_flavor: str
+    by_alias: bool = False
+
+
+def extract_usage(raw_dump: dict[str, Any], spec: UsageExtractionSpec) -> RequestUsage:
+    """Extract a :class:`RequestUsage` from a provider response dump via ``spec``.
+
+    Single owner of the :meth:`RequestUsage.extract` call mechanics; adapters
+    pass the dump they produced (using ``spec.by_alias`` to choose the dump mode)
+    plus their spec, instead of re-typing the genai-prices argument tuple.
+    """
+    return RequestUsage.extract(
+        raw_dump,
+        provider=spec.provider,
+        provider_url=spec.provider_url,
+        provider_fallback=spec.provider_fallback,
+        api_flavor=spec.api_flavor,
+    )
+
+
+GENAI_PRICES_PROFILE: dict[Provider, UsageExtractionSpec] = {
+    Provider.OPENAI: UsageExtractionSpec(
+        provider="openai",
+        provider_url="https://api.openai.com",
+        provider_fallback="openai",
+        api_flavor="chat",
+    ),
+    Provider.ANTHROPIC: UsageExtractionSpec(
+        provider="anthropic",
+        provider_url="https://api.anthropic.com",
+        provider_fallback="anthropic",
+        api_flavor="default",
+    ),
+    Provider.GEMINI: UsageExtractionSpec(
+        provider="google",
+        provider_url="https://generativelanguage.googleapis.com",
+        provider_fallback="google",
+        api_flavor="default",
+        by_alias=True,
+    ),
+    Provider.AZURE_OPENAI: UsageExtractionSpec(
+        provider="azure",
+        provider_url="https://api.openai.com",
+        provider_fallback="openai",
+        api_flavor="chat",
+    ),
+}
+"""Single source of truth mapping each :class:`Provider` to its genai-prices spec."""
 
 
 type UnpricedKind = Literal["no_usage", "unknown_model", "unknown_provider", "pricing_error"]
@@ -161,4 +251,13 @@ class CostAccumulator:
         return combined
 
 
-__all__ = ["CostAccumulator", "CostResult", "Unpriced", "UnpricedKind", "compute_cost"]
+__all__ = [
+    "GENAI_PRICES_PROFILE",
+    "CostAccumulator",
+    "CostResult",
+    "Unpriced",
+    "UnpricedKind",
+    "UsageExtractionSpec",
+    "compute_cost",
+    "extract_usage",
+]

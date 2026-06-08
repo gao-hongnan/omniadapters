@@ -22,12 +22,7 @@ from .errors import CompletionAPIError, CompletionHTTPError
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-__all__ = (
-    "_map_anthropic_errors",
-    "_map_azure_openai_errors",
-    "_map_google_errors",
-    "_map_openai_errors",
-)
+__all__ = ("_map_anthropic_errors", "_map_azure_openai_errors", "_map_google_errors", "_map_openai_errors")
 
 _HTTP_ERROR_THRESHOLD = 400
 

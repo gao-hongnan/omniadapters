@@ -1,13 +1,15 @@
-"""Probe tests for the adapter usage-extraction constants.
+"""Probe tests for the adapter usage-extraction registry.
 
-They prove the provider/url/fallback/api_flavor constants each completion
-adapter feeds to :meth:`pydantic_ai.usage.RequestUsage.extract` actually
-populate token fields against the bundled genai-prices catalog.
+They prove the genai-prices specs in :data:`omniadapters.core.cost.GENAI_PRICES_PROFILE`
+(the single source of truth each adapter reads) actually populate token fields
+against the bundled genai-prices catalog. The positive tests route through
+:func:`omniadapters.core.cost.extract_usage` + the registry exactly as the
+adapters do; the negative-control tests call :meth:`RequestUsage.extract`
+directly with deliberately *wrong* params to prove why each spec value matters.
 
-These tests import ONLY ``pydantic_ai`` (and the provider SDK ``model_dump``
-shapes the adapters produce). They deliberately do NOT import
-``omniadapters.core.models`` so they can run while that module is being edited
-in parallel.
+These tests import ``omniadapters.core.cost`` (which does not pull in
+``omniadapters.core.models`` at runtime) plus the provider SDK ``model_dump``
+shapes the adapters produce.
 
 Ground truth verified against the installed ``.venv`` sources:
 
@@ -28,6 +30,9 @@ from __future__ import annotations
 
 from pydantic_ai.usage import RequestUsage
 
+from omniadapters.core.cost import GENAI_PRICES_PROFILE, UsageExtractionSpec, extract_usage
+from omniadapters.core.enums import Provider
+
 # --- OpenAI -----------------------------------------------------------------
 
 # Shape of openai ChatCompletion.model_dump(mode="python") (relevant subset).
@@ -47,13 +52,7 @@ _OPENAI_DUMP = {
 
 
 def test_openai_chat_flavor_extracts_tokens() -> None:
-    usage = RequestUsage.extract(
-        _OPENAI_DUMP,
-        provider="openai",
-        provider_url="https://api.openai.com",
-        provider_fallback="openai",
-        api_flavor="chat",
-    )
+    usage = extract_usage(_OPENAI_DUMP, GENAI_PRICES_PROFILE[Provider.OPENAI])
 
     assert usage.has_values() is True
     assert usage.input_tokens == 100
@@ -99,13 +98,7 @@ _ANTHROPIC_DUMP = {
 
 
 def test_anthropic_default_flavor_extracts_tokens() -> None:
-    usage = RequestUsage.extract(
-        _ANTHROPIC_DUMP,
-        provider="anthropic",
-        provider_url="https://api.anthropic.com",
-        provider_fallback="anthropic",
-        api_flavor="default",
-    )
+    usage = extract_usage(_ANTHROPIC_DUMP, GENAI_PRICES_PROFILE[Provider.ANTHROPIC])
 
     assert usage.has_values() is True
     # The anthropic catalog re-adds cached tokens onto input_tokens because the
@@ -141,13 +134,7 @@ def _gemini_dump_by_alias() -> dict[str, object]:
 
 
 def test_google_default_flavor_extracts_tokens_from_by_alias_dump() -> None:
-    usage = RequestUsage.extract(
-        _gemini_dump_by_alias(),
-        provider="google",
-        provider_url="https://generativelanguage.googleapis.com",
-        provider_fallback="google",
-        api_flavor="default",
-    )
+    usage = extract_usage(_gemini_dump_by_alias(), GENAI_PRICES_PROFILE[Provider.GEMINI])
 
     assert usage.has_values() is True
     assert usage.input_tokens == 100
@@ -185,20 +172,12 @@ def test_google_snake_case_dump_yields_all_zero() -> None:
 # --- Azure (OpenAI-compatible) ----------------------------------------------
 
 
-def test_azure_chat_flavor_extracts_tokens_with_endpoint() -> None:
-    """Extract azure tokens using an azure endpoint URL.
-
-    Azure carries the OpenAI ChatCompletion usage shape. With the azure provider
-    id + an azure endpoint URL + 'openai' fallback + 'chat' flavor, extraction
-    must populate tokens.
+def test_azure_chat_flavor_extracts_tokens() -> None:
+    """Azure carries the OpenAI ChatCompletion shape; its registry spec resolves to
+    OpenAI's (identical) chat extractor, so it extracts tokens with no per-deployment
+    endpoint handling -- exactly as the adapter now does.
     """
-    usage = RequestUsage.extract(
-        _OPENAI_DUMP,
-        provider="azure",
-        provider_url="https://my-resource.openai.azure.com",
-        provider_fallback="openai",
-        api_flavor="chat",
-    )
+    usage = extract_usage(_OPENAI_DUMP, GENAI_PRICES_PROFILE[Provider.AZURE_OPENAI])
 
     assert usage.has_values() is True
     assert usage.input_tokens == 100
@@ -206,20 +185,43 @@ def test_azure_chat_flavor_extracts_tokens_with_endpoint() -> None:
     assert usage.cache_read_tokens == 10
 
 
-def test_azure_chat_flavor_extracts_tokens_with_fallback_url() -> None:
-    """Extract azure tokens using the OpenAI fallback URL.
+# --- Registry: single source of truth ---------------------------------------
+#
+# The genai-prices extraction vocabulary (provider id / url / fallback /
+# api_flavor / by_alias) is owned in one place, ``GENAI_PRICES_PROFILE``, keyed
+# by the canonical ``Provider`` enum. Adapters and these tests read that table
+# instead of each re-typing the constants. These tests pin the table so an
+# accidental edit to any spec (e.g. flipping openai's api_flavor to 'default')
+# breaks the build instead of silently zeroing production usage.
 
-    When no azure endpoint is configured the adapter falls back to the OpenAI
-    URL; extraction must still populate tokens.
-    """
-    usage = RequestUsage.extract(
-        _OPENAI_DUMP,
+
+def test_registry_covers_every_provider() -> None:
+    assert set(GENAI_PRICES_PROFILE) == set(Provider)
+
+
+def test_registry_specs_match_genai_prices_vocabulary() -> None:
+    assert GENAI_PRICES_PROFILE[Provider.OPENAI] == UsageExtractionSpec(
+        provider="openai",
+        provider_url="https://api.openai.com",
+        provider_fallback="openai",
+        api_flavor="chat",
+    )
+    assert GENAI_PRICES_PROFILE[Provider.ANTHROPIC] == UsageExtractionSpec(
+        provider="anthropic",
+        provider_url="https://api.anthropic.com",
+        provider_fallback="anthropic",
+        api_flavor="default",
+    )
+    assert GENAI_PRICES_PROFILE[Provider.GEMINI] == UsageExtractionSpec(
+        provider="google",
+        provider_url="https://generativelanguage.googleapis.com",
+        provider_fallback="google",
+        api_flavor="default",
+        by_alias=True,
+    )
+    assert GENAI_PRICES_PROFILE[Provider.AZURE_OPENAI] == UsageExtractionSpec(
         provider="azure",
         provider_url="https://api.openai.com",
         provider_fallback="openai",
         api_flavor="chat",
     )
-
-    assert usage.has_values() is True
-    assert usage.input_tokens == 100
-    assert usage.output_tokens == 50

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from instructor import Mode
-from pydantic_ai.usage import RequestUsage
 
 from ...core.constants import AZURE_OPENAI_IMPORT_ERROR
 
@@ -13,6 +12,8 @@ try:
 except ImportError as e:
     raise ImportError(AZURE_OPENAI_IMPORT_ERROR) from e
 
+from ...core.cost import GENAI_PRICES_PROFILE, UsageExtractionSpec
+from ...core.enums import Provider
 from ...core.models import AzureOpenAIProviderConfig, CompletionResponse, StreamChunk
 from .._map_api_errors import _map_azure_openai_errors
 from .base import BaseAdapter
@@ -32,6 +33,8 @@ class AzureOpenAIAdapter(
         ChatCompletionChunk,
     ]
 ):
+    _usage_spec: ClassVar[UsageExtractionSpec] = GENAI_PRICES_PROFILE[Provider.AZURE_OPENAI]
+
     @property
     def instructor_mode(self) -> Mode:
         return Mode.TOOLS
@@ -72,31 +75,16 @@ class AzureOpenAIAdapter(
     def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
         choice = response.choices[0] if response.choices else None
 
-        # NOTE: Azure responses carry the OpenAI ChatCompletion usage shape, so
-        # the OpenAI 'chat' extractor parses them. Prefer the configured Azure
-        # endpoint for provider resolution, falling back to the OpenAI URL and
-        # the 'openai' fallback id so genai-prices still finds the model.
-        azure_endpoint = getattr(self.provider_config, "azure_endpoint", None)
-        provider_url = (
-            azure_endpoint if isinstance(azure_endpoint, str) and azure_endpoint else "https://api.openai.com"
-        )
-
-        usage = (
-            RequestUsage.extract(
-                response.model_dump(mode="python"),
-                provider="azure",
-                provider_url=provider_url,
-                provider_fallback="openai",
-                api_flavor="chat",
-            )
-            if response.usage
-            else None
-        )
+        # NOTE: Azure responses carry the OpenAI ChatCompletion usage shape, and the
+        # 'azure' spec's OpenAI URL + 'chat' flavor resolve to OpenAI's extractor,
+        # which is identical to Azure's -- so no per-deployment endpoint handling is
+        # needed for usage extraction. (provider_id stays 'azure' for pricing.)
+        usage = self._extract_usage(response, self._usage_spec, present=response.usage)
 
         return CompletionResponse[ChatCompletion](
             content=choice.message.content or "" if choice else "",
             model=response.model,
-            provider_id="azure",
+            provider_id=self._usage_spec.provider,
             usage=usage,
             raw_response=response,
         )

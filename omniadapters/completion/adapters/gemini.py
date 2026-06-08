@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from instructor import Mode
-from pydantic_ai.usage import RequestUsage
 
 from ...core.constants import GEMINI_IMPORT_ERROR
 
@@ -21,6 +20,8 @@ try:
 except ImportError as e:
     raise ImportError(GEMINI_IMPORT_ERROR) from e
 
+from ...core.cost import GENAI_PRICES_PROFILE, UsageExtractionSpec
+from ...core.enums import Provider
 from ...core.models import CompletionResponse, GeminiProviderConfig, StreamChunk
 from .._map_api_errors import _map_google_errors
 from .base import BaseAdapter
@@ -40,6 +41,8 @@ class GeminiAdapter(
         GenerateContentResponse,
     ]
 ):
+    _usage_spec: ClassVar[UsageExtractionSpec] = GENAI_PRICES_PROFILE[Provider.GEMINI]
+
     @property
     def instructor_mode(self) -> Mode:
         return Mode.GENAI_STRUCTURED_OUTPUTS
@@ -133,25 +136,12 @@ class GeminiAdapter(
 
         model = response.model_version or str(self.completion_params.model)
 
-        # NOTE: genai-prices' google extractor reads camelCase keys
-        # (usageMetadata.promptTokenCount, modelVersion, ...), so dump with
-        # by_alias=True. The default snake_case dump yields an all-zero usage.
-        usage = (
-            RequestUsage.extract(
-                response.model_dump(mode="python", by_alias=True),
-                provider="google",
-                provider_url="https://generativelanguage.googleapis.com",
-                provider_fallback="google",
-                api_flavor="default",
-            )
-            if response.usage_metadata
-            else None
-        )
+        usage = self._extract_usage(response, self._usage_spec, present=response.usage_metadata)
 
         return CompletionResponse[GenerateContentResponse](
             content=content,
             model=model,
-            provider_id="google",
+            provider_id=self._usage_spec.provider,
             usage=usage,
             raw_response=response,
         )

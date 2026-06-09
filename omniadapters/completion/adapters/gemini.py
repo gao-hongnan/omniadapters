@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, overload
 
 from instructor import Mode
 
@@ -11,6 +11,7 @@ from ...core.constants import GEMINI_IMPORT_ERROR
 try:
     from google import genai
     from google.genai.types import ContentOrDict, GenerateContentConfig, GenerateContentResponse
+    from google.genai.types import FinishReason as GeminiFinishReason
     from instructor.processing.multimodal import extract_genai_multimodal_content
     from instructor.providers.gemini.utils import (
         convert_to_genai_messages,
@@ -21,8 +22,8 @@ except ImportError as e:
     raise ImportError(GEMINI_IMPORT_ERROR) from e
 
 from ...core.cost import GENAI_PRICES_PROFILE, UsageExtractionSpec
-from ...core.enums import Provider
-from ...core.models import CompletionResponse, GeminiProviderConfig, StreamChunk
+from ...core.enums import FinishReason, Provider
+from ...core.models import CompletionResponse, GeminiProviderConfig, StreamChunk, ToolCallDelta
 from .._map_api_errors import _map_google_errors
 from .base import BaseAdapter
 
@@ -30,6 +31,25 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from ...core.types import MessageParam
+
+
+# Gemini's raw `candidate.finish_reason` is an enum; ``str(enum)`` would leak the
+# Python class name (``"FinishReason.STOP"``), so map members explicitly. Mirrors
+# `pydantic_ai/models/google.py:_FINISH_REASON_MAP`; unmapped members (image-only
+# stops, UNSPECIFIED, OTHER) normalize to ``None`` via ``.get``.
+_FINISH_REASON_MAP: Final[dict[GeminiFinishReason, FinishReason]] = {
+    GeminiFinishReason.STOP: FinishReason.STOP,
+    GeminiFinishReason.MAX_TOKENS: FinishReason.LENGTH,
+    GeminiFinishReason.SAFETY: FinishReason.CONTENT_FILTER,
+    GeminiFinishReason.RECITATION: FinishReason.CONTENT_FILTER,
+    GeminiFinishReason.LANGUAGE: FinishReason.ERROR,
+    GeminiFinishReason.BLOCKLIST: FinishReason.CONTENT_FILTER,
+    GeminiFinishReason.PROHIBITED_CONTENT: FinishReason.CONTENT_FILTER,
+    GeminiFinishReason.SPII: FinishReason.CONTENT_FILTER,
+    GeminiFinishReason.MALFORMED_FUNCTION_CALL: FinishReason.ERROR,
+    GeminiFinishReason.IMAGE_SAFETY: FinishReason.CONTENT_FILTER,
+    GeminiFinishReason.UNEXPECTED_TOOL_CALL: FinishReason.ERROR,
+}
 
 
 class GeminiAdapter(
@@ -152,33 +172,28 @@ class GeminiAdapter(
 
         candidate = chunk.candidates[0]
         content = ""
-        tool_calls = None
+        tool_calls: list[ToolCallDelta] | None = None
 
         if candidate.content and candidate.content.parts:
             for part in candidate.content.parts:
-                if hasattr(part, "text") and part.text:
+                if part.text:
                     content += part.text
 
-                if hasattr(part, "function_call"):
-                    function_call = part.function_call
-                    if function_call is not None:
-                        if tool_calls is None:
-                            tool_calls = []
+                function_call = part.function_call
+                if function_call is not None:
+                    if tool_calls is None:
+                        tool_calls = []
+                    tool_calls.append(ToolCallDelta(name=function_call.name, args=function_call.args))
 
-                        call_data: dict[str, Any] = {}
-                        if hasattr(function_call, "name"):
-                            call_data["name"] = function_call.name
-                        if hasattr(function_call, "args"):
-                            call_data["args"] = function_call.args
+        raw_reason = candidate.finish_reason
+        finish_reason = _FINISH_REASON_MAP.get(raw_reason) if raw_reason else None
 
-                        tool_calls.append(call_data)
-
-        if not content and not tool_calls and not candidate.finish_reason:
+        if not content and not tool_calls and raw_reason is None:
             return None
 
         return StreamChunk(
             content=content,
-            finish_reason=str(candidate.finish_reason) if candidate.finish_reason else None,
+            finish_reason=finish_reason,
             tool_calls=tool_calls,
             raw_chunk=chunk,
         )

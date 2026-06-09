@@ -17,6 +17,23 @@ class Capability(StrEnum):
     AUDIO = "audio"
 
 
+class FinishReason(StrEnum):
+    """Provider-neutral reason a completion stopped.
+
+    Normalized onto the OpenTelemetry GenAI vocabulary (the same target
+    ``pydantic_ai`` maps to), so a single closed set replaces each provider's
+    raw, mutually-incompatible stop strings. Each adapter owns a
+    ``dict[<provider raw reason>, FinishReason]`` table that translates into
+    this enum; unmapped/unknown raw reasons normalize to ``None``.
+    """
+
+    STOP = "stop"
+    LENGTH = "length"
+    CONTENT_FILTER = "content_filter"
+    TOOL_CALL = "tool_call"
+    ERROR = "error"
+
+
 class Model(StrEnum):
     GPT_4O = "gpt-4o"
     GPT_4O_MINI = "gpt-4o-mini"

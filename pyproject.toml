@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "omniadapters"
-version = "35.0.0"
+version = "36.0.0"
 description = "A collection of code for omniadapters - unified interfaces for LLM providers."
 authors = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
 maintainers = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
@@ -40,7 +40,8 @@ dependencies = [
     "pydantic-settings>=2.11.0,<3.0.0",
     "jsonref>=1.1.0,<2.0.0",
     "instructor>=1.15.0,<1.16.0",
-    "pydantic-ai-slim[anthropic,google,openai]>=1.93.0",
+    "pydantic-ai-slim[anthropic,google,openai]>=1.97.0,<2.0.0",
+    "genai-prices>=0.0.60",
     "openai>=2.8.0,<3.0.0",
     "anthropic>=0.72.0,<1.0.0",
     "google-genai>=2.3.0,<3.0.0",

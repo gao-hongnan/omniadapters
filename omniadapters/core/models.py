@@ -1,11 +1,18 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Generic, Literal
+from functools import cached_property
+from typing import TYPE_CHECKING, Annotated, Any, Generic, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic_ai.usage import (
+    RequestUsage,  # noqa: TC002 - Pydantic needs runtime access to RequestUsage for the usage field
+)
 
 from .enums import Capability, Provider
 from .types import ClientResponseT, StreamChunkType
+
+if TYPE_CHECKING:
+    from .cost import CostResult
 
 
 class Allowable(BaseModel):
@@ -88,24 +95,22 @@ CompletionClientParams = Annotated[
 ]
 
 
-class Usage(BaseModel):
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
-    cached_input_tokens: int | None = None
-    thinking_tokens: int | None = None
-    tool_use_tokens: int | None = None
-
-    model_config = ConfigDict(frozen=True)
-
-
 class CompletionResponse(BaseModel, Generic[ClientResponseT]):
     content: str
     model: str
-    usage: Usage | None = None
+    provider_id: str
+    usage: RequestUsage | None = None
     raw_response: ClientResponseT = Field(exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @cached_property
+    def cost(self) -> CostResult:
+        # Imported lazily to break the models <-> cost import cycle. The
+        # cached_property is not a pydantic field, so it never serializes.
+        from .cost import compute_cost
+
+        return compute_cost(self.usage, model_ref=self.model, provider_id=self.provider_id)
 
 
 class StreamChunk(BaseModel):

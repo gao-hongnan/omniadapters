@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from instructor import Mode
 
@@ -12,25 +12,14 @@ try:
     from anthropic import AsyncAnthropic
     from anthropic.types import Message, RawMessageStreamEvent
     from anthropic.types import MessageParam as AnthropicMessageParam
-    from anthropic.types import Usage as AnthropicUsage
 except ImportError as e:
     raise ImportError(ANTHROPIC_IMPORT_ERROR) from e
 
-from ...core.models import AnthropicProviderConfig, CompletionResponse, StreamChunk, Usage
-from ...core.usage_converter import to_usage
+from ...core.cost import GENAI_PRICES_PROFILE, UsageExtractionSpec
+from ...core.enums import Provider
+from ...core.models import AnthropicProviderConfig, CompletionResponse, StreamChunk
 from .._map_api_errors import _map_anthropic_errors
 from .base import BaseAdapter
-
-
-@to_usage.register(AnthropicUsage)
-def _(usage: AnthropicUsage) -> Usage:
-    return Usage(
-        input_tokens=usage.input_tokens,
-        output_tokens=usage.output_tokens,
-        total_tokens=usage.input_tokens + usage.output_tokens,
-        cached_input_tokens=getattr(usage, "cache_read_input_tokens", None),
-    )
-
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -47,6 +36,8 @@ class AnthropicAdapter(
         RawMessageStreamEvent,
     ]
 ):
+    _usage_spec: ClassVar[UsageExtractionSpec] = GENAI_PRICES_PROFILE[Provider.ANTHROPIC]
+
     @property
     def instructor_mode(self) -> Mode:
         return Mode.ANTHROPIC_TOOLS
@@ -92,10 +83,13 @@ class AnthropicAdapter(
                 if isinstance(text_val, str):
                     content += text_val
 
+        usage = self._extract_usage(response, self._usage_spec, present=response.usage)
+
         return CompletionResponse[Message](
             content=content,
             model=response.model,
-            usage=to_usage(response.usage) if response.usage else None,
+            provider_id=self._usage_spec.provider,
+            usage=usage,
             raw_response=response,
         )
 

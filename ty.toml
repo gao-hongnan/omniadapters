@@ -33,13 +33,14 @@ invalid-parameter-default = "ignore"
 unused-ignore-comment = "ignore"
 
 [[overrides]]
+include = ["omniadapters/**"]
+[overrides.rules]
+unresolved-import = "ignore"
+
+[[overrides]]
 include = ["tests/**"]
 [overrides.rules]
 possibly-unresolved-reference = "ignore"
-
-[[overrides]]
-include = ["omniadapters/pydantic_ai/**"]
-[overrides.rules]
 unresolved-import = "ignore"
 
 [[overrides]]

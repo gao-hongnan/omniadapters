@@ -76,3 +76,5 @@ cython_debug/
 .vscode/
 .env
 outputs/
+
+.claude/settings.local.json

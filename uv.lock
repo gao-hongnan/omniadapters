@@ -1603,10 +1603,11 @@ wheels = [
 
 [[package]]
 name = "omniadapters"
-version = "35.0.0"
+version = "36.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
+    { name = "genai-prices" },
     { name = "google-genai" },
     { name = "instructor" },
     { name = "jsonref" },
@@ -1693,6 +1694,7 @@ type = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.72.0,<1.0.0" },
+    { name = "genai-prices", specifier = ">=0.0.60" },
     { name = "google-genai", specifier = ">=2.3.0,<3.0.0" },
     { name = "instructor", specifier = ">=1.15.0,<1.16.0" },
     { name = "jsonref", specifier = ">=1.1.0,<2.0.0" },
@@ -1700,7 +1702,7 @@ requires-dist = [
     { name = "omniadapters", extras = ["token"], marker = "extra == 'all'" },
     { name = "openai", specifier = ">=2.8.0,<3.0.0" },
     { name = "pydantic", specifier = ">=2.12.0,<3.0.0" },
-    { name = "pydantic-ai-slim", extras = ["anthropic", "google", "openai"], specifier = ">=1.93.0" },
+    { name = "pydantic-ai-slim", extras = ["anthropic", "google", "openai"], specifier = ">=1.97.0,<2.0.0" },
     { name = "pydantic-settings", specifier = ">=2.11.0,<3.0.0" },
     { name = "pydanticonf", marker = "extra == 'playground'", specifier = ">=1.0.0" },
     { name = "tiktoken", marker = "extra == 'token'", specifier = ">=0.12.0" },

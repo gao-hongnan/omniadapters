@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, Literal, assert_never
@@ -23,13 +24,13 @@ from omniadapters.core.models import (
     GeminiProviderConfig,
     OpenAICompletionClientParams,
     OpenAIProviderConfig,
-    Usage,
 )
 
 if TYPE_CHECKING:
     from anthropic.types import Message
     from google.genai.types import GenerateContentResponse
     from openai.types.chat import ChatCompletion
+    from pydantic_ai.usage import RequestUsage
 
     from omniadapters.completion.adapters.anthropic import AnthropicAdapter
     from omniadapters.completion.adapters.gemini import GeminiAdapter
@@ -215,7 +216,7 @@ def create_openai_adapter(settings: CompletionPlaygroundSettings | None = None) 
     )
 
 
-def usage_summary(usage: Usage | None) -> str | None:
+def usage_summary(usage: RequestUsage | None) -> str | None:
     """Format token usage for concise terminal display."""
     if usage is None:
         return None
@@ -261,7 +262,7 @@ def trace_panel(response: CompletionDemoResponse) -> Panel:
     ]
 
     if response.usage:
-        usage_json = response.usage.model_dump_json(indent=2)
+        usage_json = json.dumps(dataclasses.asdict(response.usage), indent=2, default=str)
         renderables.extend(
             [
                 Text("\nNormalized usage", style="bold cyan"),

@@ -5,6 +5,10 @@ on:
     tags:
       - v*
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   ci:
     uses: ./.github/workflows/ci.yml
@@ -22,6 +26,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
       - run: uv build
       - uses: actions/upload-artifact@v4
         with:

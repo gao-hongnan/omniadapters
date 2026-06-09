@@ -66,6 +66,17 @@ ci: lint security typecheck test
 clear-cache: .uv
 	uv run python scripts/clear_cache.py
 
+.PHONY: release
+release: ## Release a new version (e.g., make release VERSION=35.0.0)
+	@test -n "$(VERSION)" || (echo "Error: VERSION is required. Usage: make release VERSION=X.Y.Z" && exit 1)
+	@echo "Releasing v$(VERSION)..."
+	git add pyproject.toml
+	git commit -m "release:v$(VERSION)"
+	git push origin main
+	git tag -a v$(VERSION) -m "Release v$(VERSION)"
+	git push origin v$(VERSION)
+	@echo "Released v$(VERSION) to PyPI!"
+
 .PHONY: help
 help:
 	@echo "Development Commands:"
@@ -80,6 +91,9 @@ help:
 	@echo "  coverage            Run tests with coverage reporting (95% minimum)"
 	@echo "  docs                Build Jupyter Book documentation"
 	@echo "  ci                  Run full CI pipeline (lint, security, typecheck, test, coverage)"
+	@echo ""
+	@echo "Release Commands:"
+	@echo "  release VERSION=X.Y.Z  Commit, tag, and push a release (triggers PyPI deployment)"
 	@echo ""
 	@echo "Utility Commands:"
 	@echo "  clear-cache         Remove Python cache files and directories"

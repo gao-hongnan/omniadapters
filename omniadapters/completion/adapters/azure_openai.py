@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from instructor import Mode
 
@@ -8,36 +8,15 @@ from ...core.constants import AZURE_OPENAI_IMPORT_ERROR
 
 try:
     from openai import AsyncAzureOpenAI
-    from openai.types import CompletionUsage as OpenAIUsage
     from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam
 except ImportError as e:
     raise ImportError(AZURE_OPENAI_IMPORT_ERROR) from e
 
-from ...core.models import AzureOpenAIProviderConfig, CompletionResponse, StreamChunk, Usage
-from ...core.usage_converter import to_usage
+from ...core.cost import GENAI_PRICES_PROFILE, UsageExtractionSpec
+from ...core.enums import Provider
+from ...core.models import AzureOpenAIProviderConfig, CompletionResponse, StreamChunk
 from .._map_api_errors import _map_azure_openai_errors
 from .base import BaseAdapter
-
-
-@to_usage.register(OpenAIUsage)
-def _(usage: OpenAIUsage) -> Usage:
-    cached_input_tokens = None
-    thinking_tokens = None
-
-    if usage.prompt_tokens_details:
-        cached_input_tokens = usage.prompt_tokens_details.cached_tokens
-
-    if usage.completion_tokens_details:
-        thinking_tokens = usage.completion_tokens_details.reasoning_tokens
-
-    return Usage(
-        input_tokens=usage.prompt_tokens,
-        output_tokens=usage.completion_tokens,
-        total_tokens=usage.total_tokens,
-        cached_input_tokens=cached_input_tokens,
-        thinking_tokens=thinking_tokens,
-    )
-
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -54,6 +33,8 @@ class AzureOpenAIAdapter(
         ChatCompletionChunk,
     ]
 ):
+    _usage_spec: ClassVar[UsageExtractionSpec] = GENAI_PRICES_PROFILE[Provider.AZURE_OPENAI]
+
     @property
     def instructor_mode(self) -> Mode:
         return Mode.TOOLS
@@ -94,10 +75,17 @@ class AzureOpenAIAdapter(
     def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
         choice = response.choices[0] if response.choices else None
 
+        # NOTE: Azure responses carry the OpenAI ChatCompletion usage shape, and the
+        # 'azure' spec's OpenAI URL + 'chat' flavor resolve to OpenAI's extractor,
+        # which is identical to Azure's -- so no per-deployment endpoint handling is
+        # needed for usage extraction. (provider_id stays 'azure' for pricing.)
+        usage = self._extract_usage(response, self._usage_spec, present=response.usage)
+
         return CompletionResponse[ChatCompletion](
             content=choice.message.content or "" if choice else "",
             model=response.model,
-            usage=to_usage(response.usage) if response.usage else None,
+            provider_id=self._usage_spec.provider,
+            usage=usage,
             raw_response=response,
         )
 

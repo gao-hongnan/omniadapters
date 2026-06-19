@@ -14,6 +14,7 @@ except ImportError as e:
 from ..core.cost import CostAccumulator, Unpriced, compute_cost
 from .adapter import PydanticAIAdapter
 from .factory import create_adapter
+from .tracing import PydanticAITrace, make_trace_recorder
 
 __all__ = [
     "Agent",
@@ -23,6 +24,7 @@ __all__ = [
     "ModelSettings",
     "PriceCalculation",
     "PydanticAIAdapter",
+    "PydanticAITrace",
     "RequestUsage",
     "RunContext",
     "RunUsage",
@@ -32,4 +34,5 @@ __all__ = [
     "UsageLimits",
     "compute_cost",
     "create_adapter",
+    "make_trace_recorder",
 ]

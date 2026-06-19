@@ -71,16 +71,20 @@ pydantic_ai.output.OutputDataT : PydanticAI's covariant output TypeVar.
 
 from __future__ import annotations
 
+import threading
 from types import NoneType
 from typing import TYPE_CHECKING, Any, TypeVar, get_args, overload
 
 from pydantic_ai.models import KnownModelName, infer_model
 from pydantic_ai.providers import infer_provider_class
 
+from ..core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
+
 _KNOWN_MODEL_NAMES: frozenset[str] = frozenset(get_args(KnownModelName.__value__))
 
 if TYPE_CHECKING:
     from pydantic_ai import Agent
+    from pydantic_ai.models import Model
     from pydantic_ai.output import OutputSpec
     from pydantic_ai.providers import Provider
 
@@ -94,6 +98,8 @@ class PydanticAIAdapter:
     def __init__(self, *, provider_config: ProviderConfig, model_name: KnownModelName | str) -> None:
         self.provider_config = provider_config
         self.model_name = model_name
+        self._model: Model | None = None
+        self._model_lock = threading.Lock()
 
     @overload
     def create_agent(
@@ -140,18 +146,7 @@ class PydanticAIAdapter:
     ) -> Agent[_DepsT, _OutputT]:
         from pydantic_ai import Agent  # NOTE: `Agent` can be a heavy import.
 
-        provider_name: str = self.provider_config.provider
-        client_kwargs = self.provider_config.get_client_kwargs()
-
-        def custom_provider_factory(name: str) -> Provider[Any]:  # NOTE: pydantic-ai uses this type
-            provider_class: type[Provider[Any]] = infer_provider_class(name)
-            return provider_class(**client_kwargs)
-
-        if self.model_name in _KNOWN_MODEL_NAMES:
-            model = infer_model(self.model_name, provider_factory=custom_provider_factory)
-        else:
-            model_string = f"{provider_name}:{self.model_name}"
-            model = infer_model(model_string, provider_factory=custom_provider_factory)
+        model = self._get_or_build_model()
 
         final_kwargs: dict[str, Any] = {"model": model}
         if deps_type is not NoneType:
@@ -161,3 +156,45 @@ class PydanticAIAdapter:
         final_kwargs.update(agent_kwargs)
 
         return Agent(**final_kwargs)
+
+    def _get_or_build_model(self) -> Model:
+        if self._model is None:
+            with self._model_lock:
+                if self._model is None:
+                    self._model = self._build_model()
+        return self._model
+
+    def _build_model(self) -> Model:
+        provider_name: str = self.provider_config.provider
+        client_kwargs = self.provider_config.get_client_kwargs()
+
+        def custom_provider_factory(name: str) -> Provider[Any]:  # NOTE: pydantic-ai uses this type
+            provider_class: type[Provider[Any]] = infer_provider_class(name)
+            return provider_class(**client_kwargs)
+
+        if self.model_name in _KNOWN_MODEL_NAMES:
+            return infer_model(self.model_name, provider_factory=custom_provider_factory)
+        model_string = f"{provider_name}:{self.model_name}"
+        return infer_model(model_string, provider_factory=custom_provider_factory)
+
+    async def aclose(self) -> None:
+        """Close the underlying provider HTTP client, if one was built.
+
+        Idempotent: a no-op when ``create_agent`` has not yet been called.
+        After ``aclose``, a subsequent ``create_agent`` rebuilds the model.
+        """
+        if self._model is None:
+            return
+
+        client = getattr(self._model, "client", None)
+        if client is not None:
+            if isinstance(client, GeminiAClose):
+                await client.aio.aclose()
+            elif isinstance(client, AsyncACloseable):
+                await client.aclose()
+            elif isinstance(client, AsyncCloseable):
+                await client.close()
+            elif isinstance(client, AsyncContextManager):
+                await client.__aexit__(None, None, None)
+
+        self._model = None

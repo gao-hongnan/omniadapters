@@ -49,6 +49,8 @@ _FINISH_REASON_MAP: Final[dict[GeminiFinishReason, FinishReason]] = {
     GeminiFinishReason.MALFORMED_FUNCTION_CALL: FinishReason.ERROR,
     GeminiFinishReason.IMAGE_SAFETY: FinishReason.CONTENT_FILTER,
     GeminiFinishReason.UNEXPECTED_TOOL_CALL: FinishReason.ERROR,
+    GeminiFinishReason.IMAGE_PROHIBITED_CONTENT: FinishReason.CONTENT_FILTER,
+    GeminiFinishReason.NO_IMAGE: FinishReason.ERROR,
 }
 
 
@@ -188,7 +190,11 @@ class GeminiAdapter(
         raw_reason = candidate.finish_reason
         finish_reason = _FINISH_REASON_MAP.get(raw_reason) if raw_reason else None
 
-        if not content and not tool_calls and raw_reason is None:
+        # Suppress no-op chunks: those carrying no text, no tool call, and no
+        # *mapped* terminal signal. An unmapped reason (OTHER, UNSPECIFIED) with
+        # nothing else is intentionally dropped rather than emitted as an empty
+        # chunk — mirroring pydantic_ai, which maps those members to ``None``.
+        if not content and not tool_calls and finish_reason is None:
             return None
 
         return StreamChunk(

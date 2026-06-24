@@ -38,11 +38,11 @@ class AnthropicProviderConfig(BaseProviderConfig):
 
 
 class GeminiProviderConfig(BaseProviderConfig):
-    provider: Literal["gemini"] = Field(default=Provider.GEMINI.value, exclude=True)
+    provider: Literal["google"] = Field(default=Provider.GEMINI.value, exclude=True)
 
 
 class AzureOpenAIProviderConfig(BaseProviderConfig):
-    provider: Literal["azure-openai"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
+    provider: Literal["azure"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
 
 
 ProviderConfig = Annotated[
@@ -77,12 +77,12 @@ class AnthropicCompletionClientParams(BaseClientParams):
 
 
 class GeminiCompletionClientParams(BaseClientParams):
-    provider: Literal["gemini"] = Field(default=Provider.GEMINI.value, exclude=True)
+    provider: Literal["google"] = Field(default=Provider.GEMINI.value, exclude=True)
     capability: Capability = Field(default=Capability.COMPLETION, exclude=True)
 
 
 class AzureOpenAICompletionClientParams(BaseClientParams):
-    provider: Literal["azure-openai"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
+    provider: Literal["azure"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
     capability: Capability = Field(default=Capability.COMPLETION, exclude=True)
 
 

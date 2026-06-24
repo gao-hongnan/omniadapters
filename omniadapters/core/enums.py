@@ -4,10 +4,19 @@ from enum import StrEnum
 
 
 class Provider(StrEnum):
+    """LLM provider identifiers.
+
+    Values intentionally follow pydantic-ai's provider naming (``google``,
+    ``azure``) rather than the model family, so they can be passed to
+    :func:`pydantic_ai.providers.infer_provider_class` without a translation
+    table. The member *names* (``GEMINI``, ``AZURE_OPENAI``) keep the
+    model-family vocabulary used throughout the completion / structify layers.
+    """
+
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
-    GEMINI = "gemini"
-    AZURE_OPENAI = "azure-openai"
+    GEMINI = "google"
+    AZURE_OPENAI = "azure"
 
 
 class Capability(StrEnum):

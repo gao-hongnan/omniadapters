@@ -4,7 +4,7 @@ import threading
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Generic, Literal, overload
 
-from instructor import Mode, handle_response_model
+from instructor.v2.core.response import handle_response_model
 
 from ...core.cost import extract_usage
 from ...core.protocols import AsyncACloseable, AsyncCloseable, AsyncContextManager, GeminiAClose
@@ -19,6 +19,7 @@ from ...core.types import (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from instructor import Mode
     from pydantic_ai.usage import RequestUsage
 
     from ...core.cost import UsageExtractionSpec

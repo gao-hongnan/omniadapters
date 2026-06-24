@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import instructor
 import pytest
+import pytest_asyncio
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -237,7 +238,7 @@ async def cleanup_adapter(adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdap
     await adapter.aclose()
 
 
-@pytest.fixture(autouse=True)
+@pytest_asyncio.fixture(autouse=True)
 async def auto_cleanup_adapters(request: pytest.FixtureRequest) -> AsyncGenerator[None]:
     """Automatically cleanup adapters after each test."""
     yield

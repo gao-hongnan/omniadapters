@@ -200,10 +200,10 @@ class TestDiscriminatedUnions:
         assert parsed_anthropic.provider == "anthropic"
         assert parsed_anthropic.api_key.get_secret_value() == "test-key"
 
-        gemini_data = {"provider": "gemini", "api_key": "test-key"}
+        gemini_data = {"provider": "google", "api_key": "test-key"}
         parsed_gemini = provider_adapter.validate_python(gemini_data)
         assert isinstance(parsed_gemini, GeminiProviderConfig)
-        assert parsed_gemini.provider == "gemini"
+        assert parsed_gemini.provider == "google"
         assert parsed_gemini.api_key.get_secret_value() == "test-key"
 
     def test_completion_params_discriminated_union_parsing(self) -> None:
@@ -223,10 +223,10 @@ class TestDiscriminatedUnions:
         assert parsed_anthropic_params.provider == "anthropic"
         assert parsed_anthropic_params.model == "claude-3-opus"
 
-        gemini_params_data = {"provider": "gemini", "model": "gemini-pro"}
+        gemini_params_data = {"provider": "google", "model": "gemini-pro"}
         parsed_gemini_params = params_adapter.validate_python(gemini_params_data)
         assert isinstance(parsed_gemini_params, GeminiCompletionClientParams)
-        assert parsed_gemini_params.provider == "gemini"
+        assert parsed_gemini_params.provider == "google"
         assert parsed_gemini_params.model == "gemini-pro"
 
     def test_discriminated_union_invalid_provider(self) -> None:

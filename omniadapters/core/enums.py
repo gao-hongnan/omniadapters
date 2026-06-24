@@ -4,10 +4,19 @@ from enum import StrEnum
 
 
 class Provider(StrEnum):
+    """LLM provider identifiers.
+
+    Values intentionally follow pydantic-ai's provider naming (``google``,
+    ``azure``) rather than the model family, so they can be passed to
+    :func:`pydantic_ai.providers.infer_provider_class` without a translation
+    table. The member *names* (``GEMINI``, ``AZURE_OPENAI``) keep the
+    model-family vocabulary used throughout the completion / structify layers.
+    """
+
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
-    GEMINI = "gemini"
-    AZURE_OPENAI = "azure-openai"
+    GEMINI = "google"
+    AZURE_OPENAI = "azure"
 
 
 class Capability(StrEnum):
@@ -15,6 +24,23 @@ class Capability(StrEnum):
     EMBEDDING = "embedding"
     VISION = "vision"
     AUDIO = "audio"
+
+
+class FinishReason(StrEnum):
+    """Provider-neutral reason a completion stopped.
+
+    Normalized onto the OpenTelemetry GenAI vocabulary (the same target
+    ``pydantic_ai`` maps to), so a single closed set replaces each provider's
+    raw, mutually-incompatible stop strings. Each adapter owns a
+    ``dict[<provider raw reason>, FinishReason]`` table that translates into
+    this enum; unmapped/unknown raw reasons normalize to ``None``.
+    """
+
+    STOP = "stop"
+    LENGTH = "length"
+    CONTENT_FILTER = "content_filter"
+    TOOL_CALL = "tool_call"
+    ERROR = "error"
 
 
 class Model(StrEnum):

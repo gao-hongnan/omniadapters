@@ -1,108 +1,29 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
-
-from instructor import Mode
+from typing import TYPE_CHECKING, ClassVar
 
 from ...core.constants import OPENAI_IMPORT_ERROR
 
 try:
     from openai import AsyncOpenAI
-    from openai.types.chat import ChatCompletion, ChatCompletionChunk, ChatCompletionMessageParam
 except ImportError as e:
     raise ImportError(OPENAI_IMPORT_ERROR) from e
 
 from ...core.cost import GENAI_PRICES_PROFILE, UsageExtractionSpec
 from ...core.enums import Provider
-from ...core.models import CompletionResponse, OpenAIProviderConfig, StreamChunk
+from ...core.models import OpenAIProviderConfig
 from .._map_api_errors import _map_openai_errors
-from .base import BaseAdapter
+from ._openai_compatible import OpenAICompatibleAdapter
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
-
-    from ...core.types import MessageParam
+    from contextlib import AbstractContextManager
 
 
-class OpenAIAdapter(
-    BaseAdapter[
-        OpenAIProviderConfig,
-        AsyncOpenAI,
-        ChatCompletionMessageParam,
-        ChatCompletion,
-        ChatCompletionChunk,
-    ]
-):
+class OpenAIAdapter(OpenAICompatibleAdapter[OpenAIProviderConfig, AsyncOpenAI]):
     _usage_spec: ClassVar[UsageExtractionSpec] = GENAI_PRICES_PROFILE[Provider.OPENAI]
-
-    @property
-    def instructor_mode(self) -> Mode:
-        return Mode.TOOLS
 
     def _create_client(self) -> AsyncOpenAI:
         return AsyncOpenAI(**self.provider_config.get_client_kwargs())
 
-    @overload
-    async def _agenerate(
-        self,
-        messages: list[MessageParam],
-        *,
-        stream: Literal[False] = False,
-        **kwargs: Any,
-    ) -> ChatCompletion: ...
-
-    @overload
-    async def _agenerate(
-        self,
-        messages: list[MessageParam],
-        *,
-        stream: Literal[True],
-        **kwargs: Any,
-    ) -> AsyncIterator[ChatCompletionChunk]: ...
-
-    async def _agenerate(
-        self,
-        messages: list[MessageParam],
-        *,
-        stream: bool = False,
-        **kwargs: Any,
-    ) -> ChatCompletion | AsyncIterator[ChatCompletionChunk]:
-        formatted_params = self._thanks_instructor(messages, **kwargs)
-
-        with _map_openai_errors(model_name=self.completion_params.model):
-            return await self.client.chat.completions.create(stream=stream, **formatted_params)
-
-    def _to_unified_response(self, response: ChatCompletion) -> CompletionResponse[ChatCompletion]:
-        choice = response.choices[0] if response.choices else None
-
-        usage = self._extract_usage(response, self._usage_spec, present=response.usage)
-
-        return CompletionResponse[ChatCompletion](
-            content=choice.message.content or "" if choice else "",
-            model=response.model,
-            provider_id=self._usage_spec.provider,
-            usage=usage,
-            raw_response=response,
-        )
-
-    def _to_unified_chunk(self, chunk: ChatCompletionChunk) -> StreamChunk | None:
-        if not chunk.choices:
-            return None
-
-        delta = chunk.choices[0].delta
-        finish_reason = chunk.choices[0].finish_reason
-
-        tool_calls = None
-        if delta.tool_calls:
-            tool_calls = [tc.model_dump() for tc in delta.tool_calls]
-
-        if not delta.content and not tool_calls and finish_reason is None:
-            return None
-
-        return StreamChunk(
-            content=delta.content or "",
-            model=chunk.model,
-            finish_reason=finish_reason,
-            tool_calls=tool_calls,
-            raw_chunk=chunk,
-        )
+    def _map_errors(self, *, model_name: str) -> AbstractContextManager[None]:
+        return _map_openai_errors(model_name=model_name)

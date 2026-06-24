@@ -116,7 +116,7 @@ class TestAdapterRegistry:
 
         assert hasattr(adapter, "_create_client")
         assert hasattr(adapter, "_with_instructor")
-        assert adapter.provider_config.provider == "gemini"
+        assert adapter.provider_config.provider == "google"
 
     def test_factory_preserves_config_attributes(self) -> None:
         expected_temperature = 0.7

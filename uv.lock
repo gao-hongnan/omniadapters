@@ -1603,7 +1603,7 @@ wheels = [
 
 [[package]]
 name = "omniadapters"
-version = "36.0.0"
+version = "37.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },

@@ -8,7 +8,7 @@ from pydantic_ai.usage import (
     RequestUsage,  # noqa: TC002 - Pydantic needs runtime access to RequestUsage for the usage field
 )
 
-from .enums import Capability, Provider
+from .enums import Capability, FinishReason, Provider
 from .types import ClientResponseT, StreamChunkType
 
 if TYPE_CHECKING:
@@ -38,11 +38,11 @@ class AnthropicProviderConfig(BaseProviderConfig):
 
 
 class GeminiProviderConfig(BaseProviderConfig):
-    provider: Literal["gemini"] = Field(default=Provider.GEMINI.value, exclude=True)
+    provider: Literal["google"] = Field(default=Provider.GEMINI.value, exclude=True)
 
 
 class AzureOpenAIProviderConfig(BaseProviderConfig):
-    provider: Literal["azure-openai"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
+    provider: Literal["azure"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
 
 
 ProviderConfig = Annotated[
@@ -77,12 +77,12 @@ class AnthropicCompletionClientParams(BaseClientParams):
 
 
 class GeminiCompletionClientParams(BaseClientParams):
-    provider: Literal["gemini"] = Field(default=Provider.GEMINI.value, exclude=True)
+    provider: Literal["google"] = Field(default=Provider.GEMINI.value, exclude=True)
     capability: Capability = Field(default=Capability.COMPLETION, exclude=True)
 
 
 class AzureOpenAICompletionClientParams(BaseClientParams):
-    provider: Literal["azure-openai"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
+    provider: Literal["azure"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
     capability: Capability = Field(default=Capability.COMPLETION, exclude=True)
 
 
@@ -113,11 +113,33 @@ class CompletionResponse(BaseModel, Generic[ClientResponseT]):
         return compute_cost(self.usage, model_ref=self.model, provider_id=self.provider_id)
 
 
+class ToolCallDelta(BaseModel):
+    """One streamed tool-call fragment, normalized across providers.
+
+    Providers stream tool calls incrementally in mutually-incompatible shapes;
+    this flattens them onto optional fields (mirroring ``pydantic_ai``'s
+    ``ToolCallPartDelta``) so a consumer reads one shape regardless of vendor.
+
+    ``args_json`` carries a JSON *string* fragment that the consumer accumulates
+    and parses (Anthropic ``input_json_delta.partial_json`` / OpenAI
+    ``function.arguments``); ``args`` carries an already-parsed arguments object
+    (Gemini ``function_call.args``). The two are mutually exclusive per chunk.
+    """
+
+    id: str | None = None
+    name: str | None = None
+    args_json: str | None = None
+    args: dict[str, Any] | None = None
+    index: int | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class StreamChunk(BaseModel):
     content: str
     model: str | None = None
-    finish_reason: str | None = None
-    tool_calls: list[dict[str, Any]] | None = None
+    finish_reason: FinishReason | None = None
+    tool_calls: list[ToolCallDelta] | None = None
     raw_chunk: StreamChunkType = Field(exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

@@ -39,6 +39,7 @@ from omniadapters.completion.errors import CompletionAPIError, CompletionHTTPErr
 
 if TYPE_CHECKING:
     from omniadapters.completion.adapters.openai import OpenAIAdapter
+    from omniadapters.core.models import ToolCallDelta
     from omniadapters.core.types import MessageParam
 
 ToolChoice = Literal["auto"] | dict[str, object]
@@ -107,21 +108,14 @@ class StreamedToolCall(BaseModel):
     name: str = ""
     arguments: str = ""
 
-    def append_delta(self, delta: dict[str, object]) -> None:
-        """Merge one OpenAI streaming tool-call delta into this accumulator."""
-        if tool_call_id := delta.get("id"):
-            self.id = str(tool_call_id)
-        if tool_call_type := delta.get("type"):
-            self.type = "function" if str(tool_call_type) == "function" else self.type
-
-        function = delta.get("function")
-        if not isinstance(function, dict):
-            return
-
-        if name := function.get("name"):
-            self.name += str(name)
-        if arguments := function.get("arguments"):
-            self.arguments += str(arguments)
+    def append_delta(self, delta: ToolCallDelta) -> None:
+        """Merge one unified streaming tool-call delta into this accumulator."""
+        if delta.id:
+            self.id = delta.id
+        if delta.name:
+            self.name += delta.name
+        if delta.args_json:
+            self.arguments += delta.args_json
 
     def to_request(self) -> ToolCallRequest:
         """Convert accumulated deltas into a complete tool-call request."""
@@ -138,13 +132,12 @@ class ToolCallAccumulator:
     def __init__(self) -> None:
         self._calls: dict[int, StreamedToolCall] = {}
 
-    def add_delta(self, delta: dict[str, object]) -> None:
-        """Add one streamed tool-call delta."""
-        index = delta.get("index")
-        if not isinstance(index, int):
+    def add_delta(self, delta: ToolCallDelta) -> None:
+        """Add one streamed tool-call delta, grouped by its stream index."""
+        if delta.index is None:
             return
 
-        call = self._calls.setdefault(index, StreamedToolCall())
+        call = self._calls.setdefault(delta.index, StreamedToolCall())
         call.append_delta(delta)
 
     def complete_calls(self) -> list[ToolCallRequest]:

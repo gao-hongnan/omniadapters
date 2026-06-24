@@ -24,14 +24,14 @@ class TestProviderEnum:
     def test_provider_enum_values(self) -> None:
         assert str(Provider.OPENAI) == "openai"
         assert str(Provider.ANTHROPIC) == "anthropic"
-        assert str(Provider.GEMINI) == "gemini"
-        assert str(Provider.AZURE_OPENAI) == "azure-openai"
+        assert str(Provider.GEMINI) == "google"
+        assert str(Provider.AZURE_OPENAI) == "azure"
 
     def test_provider_enum_membership(self) -> None:
         assert "openai" in Provider
         assert "anthropic" in Provider
-        assert "gemini" in Provider
-        assert "azure-openai" in Provider
+        assert "google" in Provider
+        assert "azure" in Provider
 
         assert "invalid_provider" not in Provider
         assert "chatgpt" not in Provider
@@ -66,7 +66,7 @@ class TestProviderEnum:
 
         assert Provider.OPENAI.value == "openai"
         assert Provider.ANTHROPIC.value == "anthropic"
-        assert Provider.GEMINI.value == "gemini"
+        assert Provider.GEMINI.value == "google"
 
         for provider in Provider:
             assert provider.value.islower()
@@ -75,7 +75,7 @@ class TestProviderEnum:
     def test_provider_enum_constructors(self) -> None:
         assert Provider("openai") == Provider.OPENAI
         assert Provider("anthropic") == Provider.ANTHROPIC
-        assert Provider("gemini") == Provider.GEMINI
+        assert Provider("google") == Provider.GEMINI
 
         with pytest.raises(ValueError, match="is not a valid Provider"):
             Provider("invalid_provider")
@@ -266,8 +266,8 @@ class TestEnumExtensibility:
     def test_enum_naming_conventions(self) -> None:
         assert str(Provider.OPENAI) == "openai"
         assert str(Provider.ANTHROPIC) == "anthropic"
-        assert str(Provider.GEMINI) == "gemini"
-        assert str(Provider.AZURE_OPENAI) == "azure-openai"
+        assert str(Provider.GEMINI) == "google"
+        assert str(Provider.AZURE_OPENAI) == "azure"
 
         assert str(Capability.COMPLETION) == "completion"
         assert str(Capability.EMBEDDING) == "embedding"
@@ -299,7 +299,7 @@ class TestTypeCompatibility:
         assert provider.replace("open", "closed") == "closedai"
         assert provider.split("e") == ["op", "nai"]
 
-        assert provider in ["openai", "anthropic", "gemini"]
+        assert provider in ["openai", "anthropic", "google"]
         assert provider not in ["chatgpt", "claude"]
 
     def test_capability_string_compatibility(self) -> None:

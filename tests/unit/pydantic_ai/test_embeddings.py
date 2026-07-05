@@ -36,9 +36,7 @@ class TestCreateEmbedder:
         assert inspect.iscoroutinefunction(embedder.embed_documents)
 
     def test_create_embedder_uses_openai_embeddings_prefix(self) -> None:
-        with patch(
-            "omniadapters.pydantic_ai.embeddings.infer_embedding_model"
-        ) as mock_infer:
+        with patch("omniadapters.pydantic_ai.embeddings.infer_embedding_model") as mock_infer:
             create_embedder(
                 provider_config=OpenAIProviderConfig(api_key=SecretStr("sk-test")),
                 model_name="text-embedding-3-small",
@@ -54,9 +52,7 @@ class TestCreateEmbedder:
                 "omniadapters.pydantic_ai.embeddings.build_provider",
                 return_value=sentinel,
             ),
-            patch(
-                "omniadapters.pydantic_ai.embeddings.infer_embedding_model"
-            ) as mock_infer,
+            patch("omniadapters.pydantic_ai.embeddings.infer_embedding_model") as mock_infer,
         ):
             create_embedder(
                 provider_config=OpenAIProviderConfig(api_key=SecretStr("sk-test")),
@@ -66,9 +62,7 @@ class TestCreateEmbedder:
         assert provider_factory("any-provider-name") is sentinel
 
     def test_create_embedder_pre_qualified_name_forwarded(self) -> None:
-        with patch(
-            "omniadapters.pydantic_ai.embeddings.infer_embedding_model"
-        ) as mock_infer:
+        with patch("omniadapters.pydantic_ai.embeddings.infer_embedding_model") as mock_infer:
             create_embedder(
                 provider_config=OpenAIProviderConfig(api_key=SecretStr("sk-test")),
                 model_name="openai:text-embedding-3-large",

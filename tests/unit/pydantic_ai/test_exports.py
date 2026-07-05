@@ -80,8 +80,8 @@ class TestPublicSurface:
 
     def test_all_is_strict_superset_of_prior_17(self) -> None:
         exported = set(pai.__all__)
-        assert _PRIOR_17 <= exported
-        assert _NEW_8 <= exported
+        assert exported >= _PRIOR_17
+        assert exported >= _NEW_8
 
     def test_image_generation_is_capability_not_tool(self) -> None:
         assert ImageGeneration is CapabilityImageGeneration

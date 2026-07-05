@@ -29,9 +29,7 @@ class TestCreateImageGeneration:
     def test_create_image_generation_returns_capability(self) -> None:
         with patch("omniadapters.pydantic_ai.images.infer_model"):
             cap = create_image_generation(
-                fallback_provider_config=OpenAIProviderConfig(
-                    api_key=SecretStr("sk-test")
-                ),
+                fallback_provider_config=OpenAIProviderConfig(api_key=SecretStr("sk-test")),
                 fallback_model_name="gpt-5.4",
             )
         assert isinstance(cap, ImageGeneration)
@@ -39,9 +37,7 @@ class TestCreateImageGeneration:
     def test_create_image_generation_fallback_uses_responses_prefix(self) -> None:
         with patch("omniadapters.pydantic_ai.images.infer_model") as mock_infer:
             create_image_generation(
-                fallback_provider_config=OpenAIProviderConfig(
-                    api_key=SecretStr("sk-test")
-                ),
+                fallback_provider_config=OpenAIProviderConfig(api_key=SecretStr("sk-test")),
                 fallback_model_name="gpt-5.4",
             )
         assert mock_infer.call_args.args[0] == "openai-responses:gpt-5.4"

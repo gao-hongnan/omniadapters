@@ -67,27 +67,18 @@ class TestQualifyModelName:
     def test_qualify_pre_qualified_passthrough(self) -> None:
         for surface in ("text", "embeddings", "image"):
             assert (
-                _qualify_model_name(
-                    provider_name="openai", model_name="openai:gpt-4o", surface=surface
-                )
+                _qualify_model_name(provider_name="openai", model_name="openai:gpt-4o", surface=surface)
                 == "openai:gpt-4o"
             )
 
     def test_qualify_non_openai_uses_provider_name(self) -> None:
         assert (
-            _qualify_model_name(
-                provider_name="google", model_name="gemini-2.5-flash", surface="text"
-            )
+            _qualify_model_name(provider_name="google", model_name="gemini-2.5-flash", surface="text")
             == "google:gemini-2.5-flash"
         )
 
     def test_qualify_openai_text_prefix(self) -> None:
-        assert (
-            _qualify_model_name(
-                provider_name="openai", model_name="gpt-4o", surface="text"
-            )
-            == "openai-chat:gpt-4o"
-        )
+        assert _qualify_model_name(provider_name="openai", model_name="gpt-4o", surface="text") == "openai-chat:gpt-4o"
 
     def test_qualify_openai_embeddings_prefix(self) -> None:
         assert (
@@ -101,8 +92,6 @@ class TestQualifyModelName:
 
     def test_qualify_openai_image_prefix(self) -> None:
         assert (
-            _qualify_model_name(
-                provider_name="openai", model_name="gpt-5.4", surface="image"
-            )
+            _qualify_model_name(provider_name="openai", model_name="gpt-5.4", surface="image")
             == "openai-responses:gpt-5.4"
         )

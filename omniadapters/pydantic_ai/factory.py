@@ -19,7 +19,7 @@ forwarded as-is.
 from __future__ import annotations
 
 from types import NoneType
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, overload
 
 from pydantic_ai import Agent
 from pydantic_ai.models import infer_model
@@ -47,6 +47,35 @@ def build_provider(provider_config: ProviderConfig) -> Provider[Any]:
     return provider_class(**provider_config.get_client_kwargs())
 
 
+# pydantic-ai routes the OpenAI provider to a different API per surface, so a bare
+# OpenAI name qualifies differently depending on what it is used for: Chat
+# Completions for text, the embeddings endpoint, and the Responses API for image
+# generation. Non-OpenAI providers use a single ``<provider>:<name>`` form.
+type _Surface = Literal["text", "embeddings", "image"]
+
+_OPENAI_SURFACE_PREFIX: Final[dict[_Surface, str]] = {
+    "text": "openai-chat",
+    "embeddings": "openai",
+    "image": "openai-responses",
+}
+
+
+def _qualify_model_name(*, provider_name: str, model_name: str, surface: _Surface = "text") -> str:
+    """Qualify a bare ``model_name`` for pydantic-ai's ``provider:model`` grammar.
+
+    A pre-qualified ``model_name`` (already contains ``":"``) is forwarded unchanged
+    on every surface. A bare name is prefixed with ``provider_name``, except OpenAI,
+    whose prefix depends on ``surface``: ``openai-chat:`` (Chat Completions, text),
+    ``openai:`` (embeddings), ``openai-responses:`` (Responses API, image generation).
+    This is the single source of truth reused by :func:`build_model`,
+    ``create_embedder`` and ``create_image_generation``.
+    """
+    if ":" in model_name:
+        return model_name
+    prefix = _OPENAI_SURFACE_PREFIX[surface] if provider_name == "openai" else provider_name
+    return f"{prefix}:{model_name}"
+
+
 def build_model(*, provider_config: ProviderConfig, model_name: str) -> Model:
     """Resolve ``model_name`` against ``provider_config``'s provider.
 
@@ -62,12 +91,7 @@ def build_model(*, provider_config: ProviderConfig, model_name: str) -> Model:
     def factory(_: str) -> Any:
         return provider
 
-    if ":" in model_name:
-        qualified = model_name
-    else:
-        prefix = "openai-chat" if provider.name == "openai" else provider.name
-        qualified = f"{prefix}:{model_name}"
-
+    qualified = _qualify_model_name(provider_name=provider.name, model_name=model_name, surface="text")
     return infer_model(qualified, provider_factory=factory)
 
 

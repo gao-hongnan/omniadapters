@@ -113,6 +113,11 @@ class OpenAICompatibleAdapter(
 
     def _to_unified_chunk(self, chunk: ChatCompletionChunk) -> StreamChunk | None:
         if not chunk.choices:
+            if chunk.usage is not None:
+                # The stream_options={"include_usage": True} final chunk: choice-less,
+                # but the sole carrier of the request's real token counts — pass it
+                # through (no unified payload) so ``raw_chunk`` consumers can read it.
+                return StreamChunk(content="", model=chunk.model, raw_chunk=chunk)
             return None
 
         choice = chunk.choices[0]

@@ -23,6 +23,7 @@ from anthropic.types import (
     RawContentBlockDeltaEvent,
     RawContentBlockStartEvent,
     RawMessageDeltaEvent,
+    RawMessageStartEvent,
     RawMessageStopEvent,
 )
 from google.genai.types import GenerateContentResponse
@@ -128,6 +129,31 @@ def test_openai_no_choices_yields_none() -> None:
         {"id": "x", "object": "chat.completion.chunk", "created": 0, "model": "gpt-4o", "choices": []}
     )
     assert _openai_adapter()._to_unified_chunk(chunk) is None
+
+
+def test_openai_usage_only_chunk_passes_through_for_raw_consumers() -> None:
+    # With stream_options={"include_usage": True} the API appends one final
+    # choice-less chunk whose only payload is `usage` — the sole carrier of the
+    # request's real token counts on a live stream. It must pass through
+    # (content-empty, reason-less) so raw_chunk consumers can read it; a
+    # choice-less chunk with no usage stays suppressed (test above).
+    chunk = ChatCompletionChunk.model_validate(
+        {
+            "id": "x",
+            "object": "chat.completion.chunk",
+            "created": 0,
+            "model": "gpt-4o",
+            "choices": [],
+            "usage": {"prompt_tokens": 7, "completion_tokens": 3, "total_tokens": 10},
+        }
+    )
+    result = _openai_adapter()._to_unified_chunk(chunk)
+    assert result is not None
+    assert result.content == ""
+    assert result.finish_reason is None
+    assert result.tool_calls is None
+    assert result.model == "gpt-4o"
+    assert result.raw_chunk is chunk
 
 
 def test_azure_inherits_openai_finish_reason_normalization() -> None:
@@ -263,6 +289,34 @@ def test_anthropic_message_delta_none_stop_reason_yields_no_chunk() -> None:
         }
     )
     assert _anthropic_adapter()._to_unified_chunk(event) is None
+
+
+def test_anthropic_message_start_passes_through_for_raw_consumers() -> None:
+    # message_start is the SOLE carrier of usage.input_tokens on an Anthropic
+    # stream. It must pass through (content-empty, reason-less) so raw_chunk
+    # consumers can read it — dropping it forced every downstream accumulator
+    # to report 0 input tokens on live streams.
+    event = RawMessageStartEvent.model_validate(
+        {
+            "type": "message_start",
+            "message": {
+                "id": "msg_1",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-sonnet-4-6",
+                "content": [],
+                "stop_reason": None,
+                "stop_sequence": None,
+                "usage": {"input_tokens": 7, "output_tokens": 0},
+            },
+        }
+    )
+    result = _anthropic_adapter()._to_unified_chunk(event)
+    assert result is not None
+    assert result.content == ""
+    assert result.finish_reason is None
+    assert result.tool_calls is None
+    assert result.raw_chunk is event
 
 
 # --- Gemini -----------------------------------------------------------------

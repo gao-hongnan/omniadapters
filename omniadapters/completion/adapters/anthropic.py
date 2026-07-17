@@ -125,7 +125,11 @@ class AnthropicAdapter(
             if raw_reason is None:
                 return None
             return StreamChunk(content="", finish_reason=_FINISH_REASON_MAP.get(raw_reason), raw_chunk=chunk)
-        if isinstance(chunk, (RawMessageStartEvent, RawContentBlockStopEvent, RawMessageStopEvent)):
+        if isinstance(chunk, RawMessageStartEvent):
+            # The sole carrier of ``usage.input_tokens`` on a live stream: pass it
+            # through (no unified payload) so ``raw_chunk`` consumers can read it.
+            return StreamChunk(content="", raw_chunk=chunk)
+        if isinstance(chunk, (RawContentBlockStopEvent, RawMessageStopEvent)):
             return None
         # Exhaustive: a new `RawMessageStreamEvent` member fails type-checking here.
         assert_never(chunk)

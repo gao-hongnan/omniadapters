@@ -1,74 +1,43 @@
+"""Settings for the critic playground: the factual-QA recipe config from YAML, API keys from a .env file."""
+
 from __future__ import annotations
 
-from functools import lru_cache
-from typing import Any, Self
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, model_validator
-from pydantic_settings import SettingsConfigDict
-from pydanticonf.settings import BaseSettingsWithYaml
+import yaml
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from omniadapters.core.models import CompletionClientParams, ProviderConfig  # noqa: TC001
-from omniadapters.structify.models import InstructorConfig  # noqa: TC001
+from omniadapters.services.cove.recipes.factual_qa import (
+    FactualQAConfig,  # noqa: TC001 - pydantic resolves it at runtime
+)
 
-
-class PromptsConfig(BaseModel):
-    base_path: str
-
-    user_prompt_path: str
-    user_context_variables: dict[str, Any] = {}
-
-    system_prompt_path: str
-    system_context_variables: dict[str, Any] = {}
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-class ProviderAgnosticAgent(BaseModel):
-    """Fully typed agent config supporting multiple providers."""
+class Settings(BaseSettings):
+    """``cove`` comes from the YAML file; each role's key from ``COVE__<ROLE>__PROVIDER_CONFIG__API_KEY``.
 
-    prompts: PromptsConfig
-    provider_config: ProviderConfig
-    completion_params: CompletionClientParams
-    instructor_config: InstructorConfig
-
-    @model_validator(mode="after")
-    def validate_provider_match(self) -> Self:
-        """Ensure provider types match."""
-        if self.provider_config.provider != self.completion_params.provider:
-            msg = f"Provider mismatch: {self.provider_config.provider} != {self.completion_params.provider}"
-            raise ValueError(msg)
-        return self
-
-
-class CoVeVerifierConfig(BaseModel):
-    """Configuration for Chain-of-Verification (CoVe) verifier.
-
-    -   https://python.useinstructor.com/prompting/self_criticism/chain_of_verification/
-    -   https://arxiv.org/pdf/2309.11495
+    Unknown top-level keys are ignored because a shared .env file may hold other tools' variables.
+    Inside ``cove`` the recipe config forbids unknown keys, so a misspelt or outdated role name
+    (critic's ``drafter``, ``skeptic``, ``fact_checker``) fails loudly instead of being dropped.
     """
 
-    drafter: ProviderAgnosticAgent
-    skeptic: ProviderAgnosticAgent
-    fact_checker: ProviderAgnosticAgent
-    judge: ProviderAgnosticAgent
+    model_config = SettingsConfigDict(env_nested_delimiter="__", env_file_encoding="utf-8", extra="ignore")
+
+    cove: FactualQAConfig
 
 
-class Settings(BaseSettingsWithYaml):  # NOTE: if you do not subclass this, you will face error.
-    cove: CoVeVerifierConfig
+def load_settings(*, yaml_file: Path, env_file: Path | None) -> Settings:
+    """Load ``yaml_file`` and overlay the environment and ``env_file`` on it.
 
-    model_config = SettingsConfigDict(env_nested_delimiter="__", extra="allow")
-
-
-@lru_cache(maxsize=128)
-def get_settings(env_file: str | None = None, yaml_file: str | None = None, **kwargs: Any) -> Settings:
-    config_dict = Settings.model_config.copy()
-
-    if env_file:
-        config_dict["env_file"] = env_file
-    if yaml_file:
-        config_dict["yaml_file"] = yaml_file
-
-    config_dict.update(kwargs)  # type: ignore[typeddict-item]
-
-    class RuntimeSettings(Settings):
-        model_config = SettingsConfigDict(**config_dict)
-
-    return RuntimeSettings(**kwargs)
+    Top-level keys starting with ``x-`` hold YAML anchors (the docker-compose convention). They
+    are templates for the roles below them, not settings, so they are dropped before validation.
+    """
+    document = yaml.safe_load(yaml_file.read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        msg = f"{yaml_file} must contain a mapping, got {type(document).__name__}"
+        raise TypeError(msg)
+    values = {key: value for key, value in document.items() if not str(key).startswith("x-")}
+    # pydantic-settings takes `_env_file` at runtime; pyright's dataclass_transform __init__ lists only fields.
+    return Settings(**values, _env_file=env_file)  # pyright: ignore[reportCallIssue]

@@ -1,3 +1,7 @@
+# The factual-QA chain-of-verification recipe: one LLM per courtroom role.
+# API keys never live here: set COVE__<ROLE>__PROVIDER_CONFIG__API_KEY in .env (see .env.sample).
+# Top-level `x-` blocks are YAML anchors for the roles below; the loader drops them before validation.
+
 x-openai-provider-config: &openai-provider-config
   provider: openai
   max_retries: 3
@@ -16,7 +20,7 @@ x-anthropic-provider-config: &anthropic-provider-config
 
 x-anthropic-completion-params: &anthropic-completion-params
   provider: anthropic
-  model: claude-3-sonnet-20240229
+  model: claude-sonnet-5-5
   temperature: 0.0
   max_tokens: 2000
 
@@ -24,10 +28,10 @@ x-instructor-config-anthropic: &instructor-config-anthropic
   mode: anthropic_tools
 
 x-gemini-provider-config: &gemini-provider-config
-  provider: gemini
+  provider: google
 
 x-gemini-completion-params: &gemini-completion-params
-  provider: gemini
+  provider: google
   model: gemini-2.5-flash
   temperature: 0.0
   max_output_tokens: 2000
@@ -36,69 +40,42 @@ x-instructor-config-gemini: &instructor-config-gemini
   mode: genai_structured_outputs
 
 cove:
-  drafter:
-    prompts:
-      base_path: "playground/critic/prompts"
-      user_prompt_path: "cove/drafter/user.j2"
-      user_context_variables:
-        question: ""
-      system_prompt_path: "cove/drafter/system.j2"
-      system_context_variables: {}
-    provider_config:
-      <<: *gemini-provider-config
-    completion_params:
-      <<: *gemini-completion-params
-      model: gemini-2.5-flash
-      max_output_tokens: 2000
-    instructor_config:
-      <<: *instructor-config-gemini
-  skeptic:
-    prompts:
-      base_path: "playground/critic/prompts"
-      user_prompt_path: "cove/skeptic/user.j2"
-      user_context_variables:
-        question: ""
-        draft_reasoning: ""
-        draft_is_aligned: false
-      system_prompt_path: "cove/skeptic/system.j2"
-      system_context_variables: {}
-    provider_config:
-      <<: *openai-provider-config
+  # factored: one isolated witness per question | two_step: one panel call | joint: one inquisitor call
+  procedure: factored
+
+  limits:
+    max_concurrent_steps: 8
+    max_concurrent_runs: 3
+    timeout_s: 120
+    witness_timeout_s: 60
+    quorum: 1.0
+
+  # Drafts the baseline answer.
+  proponent:
+    provider_config: *gemini-provider-config
+    completion_params: *gemini-completion-params
+    instructor_config: *instructor-config-gemini
+
+  # Plans open verification questions that challenge the answer (also plays the joint inquisitor).
+  contrarian:
+    provider_config: *openai-provider-config
     completion_params:
       <<: *openai-completion-params
       max_tokens: 3000
-    instructor_config:
-      <<: *instructor-config-openai
-  fact_checker:
-    prompts:
-      base_path: "playground/critic/prompts"
-      user_prompt_path: "cove/fact_checker/user.j2"
-      user_context_variables:
-        question: ""
-      system_prompt_path: "cove/fact_checker/system.j2"
-      system_context_variables: {}
-    provider_config:
-      <<: *openai-provider-config
+    instructor_config: *instructor-config-openai
+
+  # Answers each question without ever seeing the proposed answer (also plays the two-step panel).
+  witness:
+    provider_config: *openai-provider-config
     completion_params:
       <<: *openai-completion-params
       max_tokens: 2000
-    instructor_config:
-      <<: *instructor-config-openai
+    instructor_config: *instructor-config-openai
+
+  # Rules on the proposed answer given the evidence, correcting it where the evidence disagrees.
   judge:
-    prompts:
-      base_path: "playground/critic/prompts"
-      user_prompt_path: "cove/judge/user.j2"
-      user_context_variables:
-        question: ""
-        draft_reasoning: ""
-        draft_is_aligned: false
-        qa_pairs: []
-      system_prompt_path: "cove/judge/system.j2"
-      system_context_variables: {}
-    provider_config:
-      <<: *openai-provider-config
+    provider_config: *openai-provider-config
     completion_params:
       <<: *openai-completion-params
       max_tokens: 2000
-    instructor_config:
-      <<: *instructor-config-openai
+    instructor_config: *instructor-config-openai

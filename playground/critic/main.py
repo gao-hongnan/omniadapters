@@ -1,169 +1,154 @@
+r"""Verify answers to factual questions with chain of verification: the factual-QA recipe, from YAML config.
+
+    uv run -m playground.critic.main \
+        --env-file playground/critic/.env \
+        --yaml-file playground/critic/config/config.yaml \
+        --input playground/critic/questions.json \
+        --output cove_results.json
+
+Without ``--input`` it verifies one built-in question. Each role's API key comes from the env file
+(``COVE__<ROLE>__PROVIDER_CONFIG__API_KEY``); everything else comes from the YAML file.
+"""
+
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
-import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING, Final
 
+import pydantic_core
+from pydantic import TypeAdapter
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
-from .agents.cove import CoVeCandidate, CoVeOrchestrator
-from .config.settings import get_settings
-from .types import BatchVerificationResult, UserQuery, VerificationResult
+from omniadapters.services.cove import CoVeRunError
+from omniadapters.services.cove.events import StepCompleted, StepRaised
+from omniadapters.services.cove.recipes.factual_qa import Question, open_factual_qa
+
+from .config.settings import load_settings
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from omniadapters.services.cove import CoVeEvent, Transcript
+    from omniadapters.services.cove.recipes.factual_qa import Answer, VerifiedAnswer, WitnessAnswer
+
+type FactualQATranscript = Transcript[Question, Answer, str, WitnessAnswer, VerifiedAnswer]
+
+_DEFAULT_QUESTION: Final = "Who was the first woman to win two Nobel Prizes in different scientific fields?"
+_QUESTIONS: Final = TypeAdapter(list[Question])
 
 
-async def run_verification(
-    user_query: UserQuery,
-    env_file: str | None = None,
-    yaml_file: str | None = None,
-    console: Console | None = None,
-    question_label: str = "Question",
-) -> CoVeCandidate:
-    """Run verification using CoVe (Chain-of-Verification)."""
-    settings = get_settings(env_file=env_file, yaml_file=yaml_file)
-    cove_config = settings.cove
-
-    orchestrator = CoVeOrchestrator(config=cove_config, console=console, question_label=question_label)
-    result = await orchestrator.aexecute(user_query)
-
-    return result
+@dataclass(frozen=True, slots=True)
+class Arguments:
+    questions_file: Path | None
+    output_file: Path | None
+    env_file: Path
+    yaml_file: Path
 
 
-async def run_batch_verification(
-    user_queries: list[UserQuery],
-    env_file: str | None = None,
-    yaml_file: str | None = None,
-    console: Console | None = None,
-) -> BatchVerificationResult:
-    """Run verification on multiple user queries concurrently."""
-    if console is not None:
-        console.rule("[bold cyan]Batch CoVe Verification")
-        console.log(f"Starting {len(user_queries)} questions")
-
-    tasks = [
-        run_verification(
-            user_query=user_query,
-            env_file=env_file,
-            yaml_file=yaml_file,
-            console=console,
-            question_label=f"Question {index}/{len(user_queries)}",
-        )
-        for index, user_query in enumerate(user_queries, start=1)
-    ]
-    results = await asyncio.gather(*tasks)
-
-    verification_results = [
-        VerificationResult(user_query=user_query, result=result)
-        for user_query, result in zip(user_queries, results, strict=False)
-    ]
-
-    aligned_count = sum(1 for r in results if r.is_aligned)
-    total_confidence = sum(r.confidence for r in results)
-    if console is not None:
-        console.log(f"Batch finished aligned={aligned_count}/{len(results)}")
-
-    return BatchVerificationResult(
-        results=verification_results,
-        total_questions=len(user_queries),
-        aligned_count=aligned_count,
-        average_confidence=total_confidence / len(results) if results else 0.0,
+def parse_arguments() -> Arguments:
+    parser = argparse.ArgumentParser(description="Verify factual answers with chain of verification.")
+    parser.add_argument("--input", "-i", dest="questions_file", type=Path, help='JSON list of {"text": ...}')
+    parser.add_argument("--output", "-o", dest="output_file", type=Path, help="write every transcript here")
+    parser.add_argument("--env-file", type=Path, default=Path("playground/critic/.env"), help="API keys")
+    parser.add_argument(
+        "--yaml-file", type=Path, default=Path("playground/critic/config/config.yaml"), help="recipe config"
+    )
+    namespace = parser.parse_args()
+    return Arguments(
+        questions_file=namespace.questions_file,
+        output_file=namespace.output_file,
+        env_file=namespace.env_file,
+        yaml_file=namespace.yaml_file,
     )
 
 
-def load_questions(file_path: str | Path) -> list[UserQuery]:
-    file_path = Path(file_path)
-    if file_path.suffix != ".json":
-        msg = f"Unsupported file format: {file_path.suffix}. Use JSON."
-        raise ValueError(msg)
+class ConsoleObserver:
+    """Log every role's step as the court works through the docket."""
 
-    with Path.open(file_path, encoding="utf-8") as f:
-        data = json.load(f)
-        user_queries = [UserQuery(**item) for item in data]
+    def __init__(self, console: Console) -> None:
+        self._console = console
 
-    return user_queries
+    def __call__(self, event: CoVeEvent) -> None:
+        match event:
+            case StepCompleted():
+                self._console.log(
+                    f"[cyan]{event.run_id[:8]}[/] hearing {event.hearing} "
+                    f"{event.role}{_position(event.challenge_index)} done in {event.elapsed_s:.2f}s"
+                )
+            case StepRaised():
+                self._console.log(
+                    f"[red]{event.run_id[:8]}[/] hearing {event.hearing} "
+                    f"{event.role}{_position(event.challenge_index)} raised {event.error_type}: {escape(event.message)}"
+                )
+            case _:
+                return
+
+
+def _position(challenge_index: int | None) -> str:
+    return "" if challenge_index is None else f"[{challenge_index}]"
+
+
+def load_questions(path: Path) -> list[Question]:
+    return _QUESTIONS.validate_json(path.read_bytes())
+
+
+def render(
+    console: Console, questions: Sequence[Question], results: Sequence[FactualQATranscript | CoVeRunError]
+) -> None:
+    table = Table(title="Chain of verification")
+    table.add_column("Question", overflow="fold")
+    table.add_column("Verdict")
+    table.add_column("Confidence", justify="right")
+    table.add_column("Final answer", overflow="fold")
+    for question, result in zip(questions, results, strict=True):
+        if isinstance(result, CoVeRunError):
+            table.add_row(escape(question.text), "[red]failed[/]", "-", escape(str(result)))
+        else:
+            ruling = result.ruling
+            table.add_row(
+                escape(question.text), ruling.verdict.value, f"{ruling.confidence:.2f}", escape(ruling.answer)
+            )
+    console.print(table)
+
+
+def report(
+    questions: Sequence[Question], results: Sequence[FactualQATranscript | CoVeRunError]
+) -> list[dict[str, object]]:
+    entries: list[dict[str, object]] = []
+    for question, result in zip(questions, results, strict=True):
+        if isinstance(result, CoVeRunError):
+            entries.append(
+                {"question": question.text, "error": {"type": type(result).__name__, "message": str(result)}}
+            )
+        else:
+            entries.append({"question": question.text, "transcript": pydantic_core.to_jsonable_python(result)})
+    return entries
 
 
 async def main() -> None:
-    """Run verifications using the CoVe pipeline."""
+    arguments = parse_arguments()
     console = Console()
-    parser = argparse.ArgumentParser(description="Run verification on text pairs")
-    parser.add_argument(
-        "--input",
-        "-i",
-        type=str,
-        help="Input file path (JSON) containing questions",
-    )
-    parser.add_argument(
-        "--output",
-        "-o",
-        type=str,
-        help="Output file path to save batch results (JSON format)",
-    )
-    parser.add_argument(
-        "--env-file",
-        type=str,
-        default="playground/critic/.env",
-        help="Path to .env file (default: playground/critic/.env)",
-    )
-    parser.add_argument(
-        "--yaml-file",
-        type=str,
-        default="playground/critic/config/config.yaml",
-        help="Path to YAML config file (default: playground/critic/config/config.yaml)",
+    settings = load_settings(yaml_file=arguments.yaml_file, env_file=arguments.env_file)
+    questions = (
+        load_questions(arguments.questions_file) if arguments.questions_file else [Question(text=_DEFAULT_QUESTION)]
     )
 
-    args = parser.parse_args()
+    console.rule(f"[bold cyan]Chain of verification: {len(questions)} question(s), {settings.cove.procedure.value}")
+    async with open_factual_qa(settings.cove, observers=[ConsoleObserver(console)]) as cove:
+        results = await cove.run_many(questions)
+    render(console, questions, results)
 
-    if args.input:
-        console.print(f"[bold]Loading questions from[/] {args.input}")
-        user_queries = load_questions(args.input)
-        console.print(f"[green]Loaded[/] {len(user_queries)} questions")
-
-        start = time.perf_counter()
-        batch_result = await run_batch_verification(
-            user_queries,
-            env_file=args.env_file,
-            yaml_file=args.yaml_file,
-            console=console,
-        )
-        end = time.perf_counter()
-
-        table = Table(title="Batch Results")
-        table.add_column("Metric", style="bold")
-        table.add_column("Value", justify="right")
-        table.add_row("Time taken", f"{end - start:.2f}s")
-        table.add_row("Total questions", str(batch_result.total_questions))
-        table.add_row("Aligned answers", str(batch_result.aligned_count))
-        table.add_row("Success rate", f"{batch_result.success_rate:.2%}")
-        table.add_row("Average confidence", f"{batch_result.average_confidence:.2f}")
-        console.print(table)
-
-        if args.output:
-            output_path = Path(args.output)
-            output_json = json.dumps(batch_result.model_dump(), indent=4, ensure_ascii=False)
-            await asyncio.to_thread(output_path.write_text, output_json, "utf-8")
-            console.print(f"[green]Results saved to[/] {output_path}")
-    else:
-        console.rule("[bold cyan]CoVe Verification")
-        await run_verification(
-            user_query=UserQuery(
-                question="Who was the first woman to win two Nobel Prizes in different scientific fields?"
-            ),
-            env_file=args.env_file,
-            yaml_file=args.yaml_file,
-            console=console,
-        )
+    if arguments.output_file is not None:
+        document = json.dumps(report(questions, results), indent=2, ensure_ascii=False)
+        await asyncio.to_thread(arguments.output_file.write_text, document, "utf-8")
+        console.print(f"[green]Transcripts saved to[/] {arguments.output_file}")
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-"""
-uv run -m playground.critic.main \
-    --env-file playground/critic/.env \
-    --yaml-file playground/critic/config/config.yaml \
-    --input playground/critic/questions.json \
-    --output cove_results.json
-"""

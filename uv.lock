@@ -1669,11 +1669,13 @@ dependencies = [
 
 [package.optional-dependencies]
 all = [
-    { name = "pydanticonf" },
+    { name = "pyyaml" },
+    { name = "rich" },
     { name = "tiktoken" },
 ]
 playground = [
-    { name = "pydanticonf" },
+    { name = "pyyaml" },
+    { name = "rich" },
 ]
 token = [
     { name = "tiktoken" },
@@ -1755,7 +1757,8 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.12.0,<3.0.0" },
     { name = "pydantic-ai-slim", extras = ["anthropic", "google", "openai"], specifier = ">=2.5.0" },
     { name = "pydantic-settings", specifier = ">=2.11.0,<3.0.0" },
-    { name = "pydanticonf", marker = "extra == 'playground'", specifier = ">=1.0.0" },
+    { name = "pyyaml", marker = "extra == 'playground'", specifier = ">=6.0.0,<7.0.0" },
+    { name = "rich", marker = "extra == 'playground'", specifier = ">=13.0.0" },
     { name = "tiktoken", marker = "extra == 'token'", specifier = ">=0.12.0" },
 ]
 provides-extras = ["token", "playground", "all"]
@@ -2245,20 +2248,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5c/b5/8f48e906c3e0205276e8bd8cb7512217a87b2685304d64be27cad5b3019f/pydantic_settings-2.14.2.tar.gz", hash = "sha256:c19dd64b19097f1de80184f0cc7b0272a13ae6e170cbf240a3e27e381ed14a5f", size = 237700, upload-time = "2026-06-19T13:44:56.324Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/77/c1/6e422f34e569cf8e18df68d1939c81c099d2b61e4f7d9621c8a77560799c/pydantic_settings-2.14.2-py3-none-any.whl", hash = "sha256:a20c97b37910b6550d5ea50fbcc2d4187defe58cd57070b73863d069419c9440", size = 61715, upload-time = "2026-06-19T13:44:55.02Z" },
-]
-
-[[package]]
-name = "pydanticonf"
-version = "2.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/fa/b4e93a7bce45c3a07d92e483d24a20f0c5f8a3986e6c12a6e81e9ecfa2d1/pydanticonf-2.0.0.tar.gz", hash = "sha256:b9a5b6b571827fb5dc8f17d158385f86c141f6a554edd8e50d20dcd5c20f2430", size = 118550, upload-time = "2026-04-20T07:10:56.006Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/9e/ea59949a55a74e803cbf28c7f44d7e831b7dcc8a13035ac927db490fb606/pydanticonf-2.0.0-py3-none-any.whl", hash = "sha256:07e7f357d5f6c55c2023d0ccfc62e76f2a943d596cc9da5eeca5184015fd6448", size = 10199, upload-time = "2026-04-20T07:10:55.138Z" },
 ]
 
 [[package]]

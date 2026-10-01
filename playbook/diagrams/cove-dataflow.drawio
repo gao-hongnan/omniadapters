@@ -1,0 +1,267 @@
+<mxfile host="drawio">
+  <diagram id="cove-dataflow" name="CoVe dataflow">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="2300" pageHeight="1150" math="0" shadow="0" adaptiveColors="auto">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+        <mxCell id="title" value="&lt;b&gt;omniadapters.services.cove&lt;/b&gt; · dataflow of one chain-of-verification run" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;" vertex="1" parent="1">
+          <mxGeometry x="0" y="0" width="1400" height="34" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="Chain-of-Verification (Dhuliawala et al. 2023, arXiv:2309.11495): draft an answer, plan verification questions, answer them independently, then rule. From config, every role runs on a pydantic-ai agent." style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="0" y="32" width="1600" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="laneA" value="① Setup · open_factual_qa(config): one pydantic-ai agent per role, opened once and closed on exit" style="swimlane;startSize=32;html=1;fontSize=14;fontStyle=1;align=left;spacingLeft=14;fillColor=#ffe6cc;strokeColor=#d79b00;swimlaneFillColor=#fffaf3;" vertex="1" parent="1">
+          <mxGeometry x="0" y="70" width="2220" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_cfg" value="&lt;b&gt;config.yaml + .env&lt;/b&gt;&lt;br&gt;roles · procedure · limits&lt;br&gt;API keys from the environment" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.15;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="laneA">
+          <mxGeometry x="30" y="48" width="200" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_conf" value="&lt;b&gt;FactualQAConfig&lt;/b&gt; · a RoleConfig per role&lt;br&gt;provider_config · model_name · model_settings&lt;br&gt;output_mode · output_retries" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="laneA">
+          <mxGeometry x="290" y="48" width="280" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_open" value="&lt;b&gt;open_role&lt;/b&gt;(config, name=role)&lt;br&gt;build_model → Agent(model_settings, retries)&lt;br&gt;async with agent: closes its HTTP client" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="laneA">
+          <mxGeometry x="630" y="48" width="280" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_llm" value="&lt;b&gt;PydanticAIStructuredLLM&lt;/b&gt; × 4&lt;br&gt;proponent · contrarian · witness · judge&lt;br&gt;each satisfies the StructuredLLM port" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="laneA">
+          <mxGeometry x="970" y="48" width="280" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="a_build" value="&lt;b&gt;build_factual_qa&lt;/b&gt;(roles, procedure)&lt;br&gt;one llm_step per role&lt;br&gt;prompts checked against briefs at build" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;" vertex="1" parent="laneA">
+          <mxGeometry x="1310" y="48" width="280" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="ea1" value="validate" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#fffaf3;" edge="1" parent="laneA" source="a_cfg" target="a_conf">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ea2" value="per role" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#fffaf3;" edge="1" parent="laneA" source="a_conf" target="a_open">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ea3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneA" source="a_open" target="a_llm">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ea4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneA" source="a_llm" target="a_build">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="laneB" value="② ChainOfVerification.run(case) · one hearing with the Factored procedure" style="swimlane;startSize=32;html=1;fontSize=14;fontStyle=1;align=left;spacingLeft=14;fillColor=#dae8fc;strokeColor=#6c8ebf;swimlaneFillColor=#f7faff;" vertex="1" parent="1">
+          <mxGeometry x="0" y="260" width="2220" height="420" as="geometry"/>
+        </mxCell>
+        <mxCell id="eab" value="returns the engine" style="exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.6532;entryY=0;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="a_build" target="laneB">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_court" value="&lt;b&gt;Every step goes through the Court&lt;/b&gt; (a Stand per challenge)&lt;br&gt;• semaphore: max_concurrent_steps, shared by every run of the engine&lt;br&gt;• deadline: timeout_s, or witness_timeout_s per challenge&lt;br&gt;• step events → observers; finished steps → transcript.record&lt;br&gt;• a failing proponent, contrarian or judge → StepFailedError" style="shape=note;whiteSpace=wrap;html=1;size=14;align=left;verticalAlign=top;spacingLeft=10;spacingTop=4;fillColor=#f5f5f5;strokeColor=#999999;fontColor=#333333;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="30" y="46" width="500" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_proc" value="&lt;b&gt;The procedure is the paper's variant&lt;/b&gt;; swap Factored for:&lt;br&gt;• TwoStep: one panel answers every challenge at once&lt;br&gt;• Joint: one inquisitor asks and answers (sees the proposal)&lt;br&gt;• FactorRevise: a cross-examiner checks each testimony&lt;br&gt;• your own Procedure, calling steps through the Court" style="shape=note;whiteSpace=wrap;html=1;size=14;align=left;verticalAlign=top;spacingLeft=10;spacingTop=4;fillColor=#f5f5f5;strokeColor=#999999;fontColor=#333333;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="560" y="46" width="480" height="104" as="geometry"/>
+        </mxCell>
+        <mxCell id="n_hide" value="&lt;b&gt;Information hiding&lt;/b&gt;: a WitnessBrief has no proposal field, so testimony cannot&lt;br&gt;repeat the draft's errors, the paper's key finding. The brief's type and a template&lt;br&gt;check at build time enforce it. A witness that raises or times out becomes&lt;br&gt;Unanswered, and the quorum decides whether the hearing carries on." style="shape=note;whiteSpace=wrap;html=1;size=14;align=left;verticalAlign=top;spacingLeft=10;spacingTop=4;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="1350" y="46" width="610" height="96" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_case" value="&lt;b&gt;case&lt;/b&gt;&lt;br&gt;e.g. Question" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.17;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="30" y="170" width="110" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_prop" value="&lt;b&gt;Proponent&lt;/b&gt;&lt;br&gt;sees CaseBrief(case)&lt;br&gt;drafts an answer" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="200" y="170" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_proposal" value="&lt;b&gt;proposal&lt;/b&gt;&lt;br&gt;e.g. Answer" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.17;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="410" y="170" width="110" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_contra" value="&lt;b&gt;Contrarian&lt;/b&gt;&lt;br&gt;sees ContrarianBrief&lt;br&gt;(case, proposal)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="580" y="170" width="190" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_chal" value="&lt;b&gt;challenges&lt;/b&gt;&lt;br&gt;court.admit:&lt;br&gt;min ≤ n ≤ max" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.17;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="830" y="170" width="150" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_w1" value="&lt;b&gt;Witness&lt;/b&gt; · challenge 1&lt;br&gt;sees WitnessBrief&lt;br&gt;(case, challenge)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="1080" y="60" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_w2" value="&lt;b&gt;Witness&lt;/b&gt; · challenge 2&lt;br&gt;sees WitnessBrief&lt;br&gt;(case, challenge)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="1080" y="170" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_w3" value="&lt;b&gt;Witness&lt;/b&gt; · challenge n&lt;br&gt;sees WitnessBrief&lt;br&gt;(case, challenge)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="1080" y="280" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_evid" value="&lt;b&gt;evidence&lt;/b&gt;&lt;br&gt;one outcome per challenge:&lt;br&gt;Answered | Unanswered" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.17;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="1350" y="170" width="170" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_judge" value="&lt;b&gt;Judge&lt;/b&gt;&lt;br&gt;sees JudgeBrief(case, proposal,&lt;br&gt;evidence, hearing)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="1580" y="170" width="190" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_retry" value="&lt;b&gt;retrial?&lt;/b&gt;&lt;br&gt;reconsider(ruling)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="1830" y="160" width="130" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="b_trans" value="&lt;b&gt;Transcript&lt;/b&gt;&lt;br&gt;hearings · disposition · record&lt;br&gt;.ruling · .to_json()" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.15;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="laneB">
+          <mxGeometry x="2010" y="160" width="190" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_case" target="b_prop">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_prop" target="b_proposal">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_proposal" target="b_contra">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_contra" target="b_chal">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb5" value="" style="exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_chal" target="b_w1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb6" value="" style="exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_chal" target="b_w2">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb7" value="" style="exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_chal" target="b_w3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb8" value="" style="exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_w1" target="b_evid">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb9" value="" style="exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_w2" target="b_evid">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb10" value="" style="exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_w3" target="b_evid">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneB" source="b_evid" target="b_judge">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb12" value="ruling" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#f7faff;" edge="1" parent="laneB" source="b_judge" target="b_retry">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb13" value="stands" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#f7faff;" edge="1" parent="laneB" source="b_retry" target="b_trans">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="eb14" value="Reopen(revised proposal) → next hearing, up to max_hearings" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;dashed=1;labelBackgroundColor=#f7faff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="laneB" source="b_retry" target="b_proposal">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1895" y="395"/>
+              <mxPoint x="465" y="395"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="laneC" value="③ Inside every role's step · llm_step(llm, prompt, response_model, parse)" style="swimlane;startSize=32;html=1;fontSize=14;fontStyle=1;align=left;spacingLeft=14;fillColor=#e1d5e7;strokeColor=#9673a6;swimlaneFillColor=#fbf8fc;" vertex="1" parent="1">
+          <mxGeometry x="0" y="720" width="2220" height="300" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_brief" value="&lt;b&gt;brief&lt;/b&gt;&lt;br&gt;e.g. WitnessBrief" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.17;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="laneC">
+          <mxGeometry x="30" y="62" width="150" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_prompt" value="&lt;b&gt;Prompt&lt;/b&gt; (JinjaPrompt)&lt;br&gt;renders the brief's fields;&lt;br&gt;an undefined name raises" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;" vertex="1" parent="laneC">
+          <mxGeometry x="240" y="62" width="200" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_msgs" value="&lt;b&gt;Messages&lt;/b&gt;&lt;br&gt;(system, user)" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.17;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="laneC">
+          <mxGeometry x="500" y="62" width="160" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_port" value="&lt;b&gt;StructuredLLM&lt;/b&gt;.acreate&lt;br&gt;(messages, response_model)&lt;br&gt;optional: Throttled · Budgeted" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;dashed=1;" vertex="1" parent="laneC">
+          <mxGeometry x="720" y="62" width="220" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_pai" value="&lt;b&gt;PydanticAIStructuredLLM&lt;/b&gt;&lt;br&gt;OutputMode picks ToolOutput, NativeOutput&lt;br&gt;or PromptedOutput (auto: the model's default)" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="laneC">
+          <mxGeometry x="1000" y="62" width="290" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_agent" value="&lt;b&gt;pydantic-ai Agent.run&lt;/b&gt;&lt;br&gt;prompt = user, instructions = system&lt;br&gt;validates the reply as response_model" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="laneC">
+          <mxGeometry x="1350" y="62" width="300" height="76" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_provider" value="&lt;b&gt;LLM provider&lt;/b&gt;&lt;br&gt;OpenAI · Anthropic · Gemini" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="laneC">
+          <mxGeometry x="1760" y="50" width="240" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_resp" value="&lt;b&gt;response_model instance&lt;/b&gt;&lt;br&gt;e.g. Challenges, WitnessAnswer" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.17;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="laneC">
+          <mxGeometry x="1350" y="206" width="300" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_parse" value="&lt;b&gt;parse&lt;/b&gt;(response)&lt;br&gt;e.g. Challenges → list[str]" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;" vertex="1" parent="laneC">
+          <mxGeometry x="1000" y="206" width="290" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="c_result" value="&lt;b&gt;step result&lt;/b&gt;&lt;br&gt;back to the Court" style="shape=document;whiteSpace=wrap;html=1;boundedLbl=1;size=0.17;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="laneC">
+          <mxGeometry x="720" y="206" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneC" source="c_brief" target="c_prompt">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneC" source="c_prompt" target="c_msgs">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneC" source="c_msgs" target="c_port">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneC" source="c_port" target="c_pai">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneC" source="c_pai" target="c_agent">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec6" value="requests" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#fbf8fc;" edge="1" parent="laneC" source="c_agent" target="c_provider">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#b85450;strokeWidth=1.5;dashed=1;exitX=0.88;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.74;entryDx=0;entryDy=0;" edge="1" parent="laneC" source="c_agent" target="c_agent">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1614" y="178"/>
+              <mxPoint x="1702" y="178"/>
+              <mxPoint x="1702" y="118"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ec7t" value="invalid reply: the validation errors go back&lt;br&gt;to the model, retried up to output_retries times" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#b85450;" vertex="1" parent="laneC">
+          <mxGeometry x="1712" y="160" width="290" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec8" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;labelBackgroundColor=#fbf8fc;" edge="1" parent="laneC" source="c_agent" target="c_resp">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneC" source="c_resp" target="c_parse">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="ec10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;strokeColor=#4d4d4d;strokeWidth=1.5;fontSize=10;" edge="1" parent="laneC" source="c_parse" target="c_result">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg1" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="0" y="1046" width="40" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg1t" value="role: one LLM step" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="48" y="1046" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg2" value="" style="shape=document;whiteSpace=wrap;html=1;size=0.2;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="270" y="1046" width="40" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg2t" value="data that flows between steps" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="318" y="1046" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg3" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="540" y="1046" width="40" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg3t" value="pydantic-ai backend" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="588" y="1046" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg4" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="810" y="1046" width="40" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg4t" value="engine, runtime and wiring" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="858" y="1046" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg5" value="" style="rounded=1;whiteSpace=wrap;html=1;arcSize=12;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="1046" width="40" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg5t" value="configuration" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1128" y="1046" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg6" value="" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1350" y="1044" width="40" height="28" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg6t" value="external LLM provider" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1398" y="1046" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg7" value="" style="endArrow=classic;endFill=1;html=1;strokeColor=#4d4d4d;strokeWidth=1.5;dashed=1;" edge="1" parent="1">
+          <mxGeometry width="40" height="24" relative="1" as="geometry">
+            <mxPoint x="1620" y="1058" as="sourcePoint"/>
+            <mxPoint x="1660" y="1058" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lg7t" value="dashed: loop back or optional" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1668" y="1046" width="200" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg8" value="" style="shape=note;whiteSpace=wrap;html=1;size=8;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1890" y="1046" width="40" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="lg8t" value="design invariant" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1938" y="1046" width="200" height="24" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

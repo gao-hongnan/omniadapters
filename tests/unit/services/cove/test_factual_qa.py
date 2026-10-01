@@ -8,8 +8,12 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 from pydantic import ValidationError
+from pydantic_ai import Agent
+from pydantic_ai.messages import ModelResponse, ToolCallPart, UserPromptPart
+from pydantic_ai.models.function import FunctionModel
 
-from omniadapters.services.cove import ContrarianBrief, Limits, WitnessBrief
+from omniadapters.services.cove import ContrarianBrief, Limits, Messages, WitnessBrief
+from omniadapters.services.cove.backends import PydanticAIStructuredLLM
 from omniadapters.services.cove.recipes.factual_qa import (
     DEFAULT_PROMPTS,
     MAX_CHALLENGES,
@@ -31,13 +35,12 @@ from omniadapters.services.cove.recipes.factual_qa import (
     build_factual_qa,
     open_factual_qa,
 )
-from omniadapters.services.cove.testing import ScriptedLLM
+from omniadapters.services.cove.testing import RecordedCall, ScriptedLLM
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
-
-    from omniadapters.services.cove import Messages
-    from omniadapters.services.cove.testing import RecordedCall
+    from pydantic_ai.messages import ModelMessage
+    from pydantic_ai.models.function import AgentInfo
 
 _QUESTION: Final = Question(text="Who was the first woman to win two Nobel Prizes, and in which years?")
 _PROPOSAL: Final = "Marie Curie won the Nobel Prize in Physics in 1903 and in Chemistry in 1908."
@@ -130,7 +133,7 @@ class TestProcedures:
 
         await build_factual_qa(cast.roles()).run(_QUESTION)
 
-        assert {call.messages[-1].get("content") for call in cast.witness.calls} == set(_QUESTIONS)
+        assert {call.messages.user for call in cast.witness.calls} == set(_QUESTIONS)
 
     @pytest.mark.asyncio
     async def test_the_joint_variant_repeats_the_proposals_error(self) -> None:
@@ -184,16 +187,15 @@ class TestCriticDefectsStayFixed:
         questions = Challenges.model_json_schema()["properties"]["questions"]
         brief = ContrarianBrief(case=_QUESTION, proposal=Answer(text=_PROPOSAL))
 
-        system = DEFAULT_PROMPTS.contrarian(brief)[0].get("content")
+        system = DEFAULT_PROMPTS.contrarian(brief).system
 
         assert (questions["minItems"], questions["maxItems"]) == (MIN_CHALLENGES, MAX_CHALLENGES)
-        assert isinstance(system, str)
         assert f"{MIN_CHALLENGES} to {MAX_CHALLENGES}" in system
 
     @pytest.mark.asyncio
     async def test_a_prompt_can_be_replaced_by_a_typed_function(self) -> None:
         def terse_witness(brief: WitnessBrief[Question, str]) -> Messages:
-            return [{"role": "system", "content": "Answer in one word."}, {"role": "user", "content": brief.challenge}]
+            return Messages(system="Answer in one word.", user=brief.challenge)
 
         cast = _Cast()
 
@@ -201,22 +203,77 @@ class TestCriticDefectsStayFixed:
             _QUESTION
         )
 
-        assert {call.messages[0].get("content") for call in cast.witness.calls} == {"Answer in one word."}
+        assert {call.messages.system for call in cast.witness.calls} == {"Answer in one word."}
 
 
-def _role(provider: str, model: str, mode: str) -> dict[str, object]:
+_RESPONSE_MODELS: Final = {
+    model.__name__: model
+    for model in (Answer, Challenges, WitnessAnswer, PanelAnswers, Inquiry, Consistency, VerifiedAnswer)
+}
+
+
+def _courtroom_on_pydantic_ai(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+    """Play the scripted courtroom as a pydantic-ai model, answering the requested schema with its output tool."""
+    (output_tool,) = info.output_tools
+    prompt = "".join(
+        part.content
+        for part in messages[-1].parts
+        if isinstance(part, UserPromptPart) and isinstance(part.content, str)
+    )
+    call = RecordedCall(
+        messages=Messages(system=info.instructions or "", user=prompt),
+        response_model=_RESPONSE_MODELS[output_tool.parameters_json_schema["title"]],
+    )
+    return ModelResponse(parts=[ToolCallPart(output_tool.name, _courtroom(call).model_dump(mode="json"))])
+
+
+def _pydantic_ai_cast() -> FactualQARoles:
+    llm = PydanticAIStructuredLLM(Agent(FunctionModel(_courtroom_on_pydantic_ai)))
+    return FactualQARoles(proponent=llm, contrarian=llm, witness=llm, judge=llm)
+
+
+@pytest.mark.unit
+class TestOnPydanticAI:
+    @pytest.mark.parametrize(
+        ("procedure", "final_answer"),
+        [
+            (FactualQAProcedure.FACTORED, _CORRECTED),
+            (FactualQAProcedure.TWO_STEP, _CORRECTED),
+            (FactualQAProcedure.JOINT, _PROPOSAL),
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_every_procedure_rules_as_it_does_on_the_scripted_cast(
+        self, procedure: FactualQAProcedure, final_answer: str
+    ) -> None:
+        transcript = await build_factual_qa(_pydantic_ai_cast(), procedure=procedure).run(_QUESTION)
+
+        assert transcript.ruling.answer == final_answer
+
+    @pytest.mark.asyncio
+    async def test_cross_examination_flags_the_contradiction(self) -> None:
+        roles = _pydantic_ai_cast()
+
+        transcript = await build_cross_examined_factual_qa(roles, cross_examiner=roles.witness).run(_QUESTION)
+
+        findings = [item.testimony.finding.consistent for item in transcript.hearings[0].evidence.answered]
+        assert findings == [True, False, True]
+        assert transcript.ruling.answer == _CORRECTED
+
+
+def _role(provider: str, model_name: str) -> dict[str, object]:
     return {
         "provider_config": {"provider": provider, "api_key": "test"},
-        "completion_params": {"provider": provider, "model": model},
-        "instructor_config": {"mode": mode},
+        "model_name": model_name,
+        "model_settings": {"temperature": 0.0},
     }
 
 
 _ROLES: Final = {
-    "proponent": _role("google", "gemini-2.5-flash", "genai_structured_outputs"),
-    "contrarian": _role("openai", "gpt-4o-mini", "tool_call"),
-    "witness": _role("openai", "gpt-4o-mini", "tool_call"),
-    "judge": _role("anthropic", "claude-sonnet-5-5", "anthropic_tools"),
+    "proponent": {**_role("google", "gemini-2.5-flash"), "output_mode": "native"},
+    "contrarian": _role("openai", "gpt-4o-mini"),
+    "witness": _role("openai", "gpt-4o-mini"),
+    "judge": _role("anthropic", "claude-sonnet-5-5"),
 }
 
 

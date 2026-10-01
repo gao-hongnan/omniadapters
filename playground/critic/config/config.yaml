@@ -1,43 +1,25 @@
-# The factual-QA chain-of-verification recipe: one LLM per courtroom role.
+# The factual-QA chain-of-verification recipe: one pydantic-ai agent per courtroom role.
 # API keys never live here: set COVE__<ROLE>__PROVIDER_CONFIG__API_KEY in .env (see .env.sample).
 # Top-level `x-` blocks are YAML anchors for the roles below; the loader drops them before validation.
+#
+# A role is a provider_config and a model_name, plus, optionally:
+#   model_settings  pydantic-ai ModelSettings (temperature, max_tokens, thinking, timeout, ...); a typo fails loudly
+#   output_mode     auto (default) | tool | native | prompted: how the model is made to answer in the schema
+#   output_retries  retries after a response fails validation, each showing the model the errors (default 1)
+# Each provider's SDK retries transient HTTP errors on its own.
 
 x-openai-provider-config: &openai-provider-config
   provider: openai
-  max_retries: 3
-
-x-openai-completion-params: &openai-completion-params
-  provider: openai
-  model: gpt-4o-mini
-  temperature: 0.0
-
-x-instructor-config-openai: &instructor-config-openai
-  mode: tool_call
 
 x-anthropic-provider-config: &anthropic-provider-config
   provider: anthropic
-  max_retries: 3
-
-x-anthropic-completion-params: &anthropic-completion-params
-  provider: anthropic
-  model: claude-sonnet-5-5
-  temperature: 0.0
-  max_tokens: 2000
-
-x-instructor-config-anthropic: &instructor-config-anthropic
-  mode: anthropic_tools
 
 x-gemini-provider-config: &gemini-provider-config
   provider: google
 
-x-gemini-completion-params: &gemini-completion-params
-  provider: google
-  model: gemini-2.5-flash
+x-deterministic-settings: &deterministic-settings
   temperature: 0.0
-  max_output_tokens: 2000
-
-x-instructor-config-gemini: &instructor-config-gemini
-  mode: genai_structured_outputs
+  max_tokens: 2000
 
 cove:
   # factored: one isolated witness per question | two_step: one panel call | joint: one inquisitor call
@@ -53,29 +35,26 @@ cove:
   # Drafts the baseline answer.
   proponent:
     provider_config: *gemini-provider-config
-    completion_params: *gemini-completion-params
-    instructor_config: *instructor-config-gemini
+    model_name: gemini-2.5-flash
+    model_settings: *deterministic-settings
 
   # Plans open verification questions that challenge the answer (also plays the joint inquisitor).
   contrarian:
     provider_config: *openai-provider-config
-    completion_params:
-      <<: *openai-completion-params
+    model_name: gpt-4o-mini
+    model_settings:
+      <<: *deterministic-settings
       max_tokens: 3000
-    instructor_config: *instructor-config-openai
 
   # Answers each question without ever seeing the proposed answer (also plays the two-step panel).
   witness:
     provider_config: *openai-provider-config
-    completion_params:
-      <<: *openai-completion-params
-      max_tokens: 2000
-    instructor_config: *instructor-config-openai
+    model_name: gpt-4o-mini
+    model_settings: *deterministic-settings
 
   # Rules on the proposed answer given the evidence, correcting it where the evidence disagrees.
+  # To rule with Claude instead: provider_config: *anthropic-provider-config, model_name: claude-sonnet-5-5.
   judge:
     provider_config: *openai-provider-config
-    completion_params:
-      <<: *openai-completion-params
-      max_tokens: 2000
-    instructor_config: *instructor-config-openai
+    model_name: gpt-4o-mini
+    model_settings: *deterministic-settings

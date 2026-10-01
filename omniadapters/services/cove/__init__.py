@@ -46,9 +46,9 @@ paper variant, or implement :class:`Procedure` against the :class:`Court` to add
 
 Where to go next
 ----------------
-- :mod:`~omniadapters.services.cove.backends`: :class:`~omniadapters.services.cove.backends.RoleConfig`
-  and ``open_role``, one structify adapter per role from YAML or env, closed on exit; plus a
-  pydantic-ai backend.
+- :mod:`~omniadapters.services.cove.backends`: :class:`~omniadapters.services.cove.backends.PydanticAIStructuredLLM`,
+  a pydantic-ai agent behind the LLM port, and :class:`~omniadapters.services.cove.backends.RoleConfig`
+  with ``open_role``, one agent per role from YAML or env, closed on exit.
 - :mod:`~omniadapters.services.cove.testing`: ``ScriptedLLM``, for offline recipe tests.
 - :mod:`~omniadapters.services.cove.events`: the event types observers receive.
 - :mod:`~omniadapters.services.cove.recipes.factual_qa`: a complete recipe (the former

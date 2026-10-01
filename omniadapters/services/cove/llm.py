@@ -27,11 +27,11 @@ if TYPE_CHECKING:
 
 
 class StructuredLLM(Protocol):
-    """Chat messages in, a validated ``response_model`` instance out.
+    """A system message and a user message in, a validated ``response_model`` instance out.
 
-    Every ``omniadapters.structify`` adapter satisfies this protocol unchanged. So do
-    :class:`~omniadapters.services.cove.backends.PydanticAIStructuredLLM`,
-    :class:`~omniadapters.services.cove.testing.ScriptedLLM`, and the decorators in this module.
+    :class:`~omniadapters.services.cove.backends.PydanticAIStructuredLLM` puts a pydantic-ai agent
+    behind it. :class:`~omniadapters.services.cove.testing.ScriptedLLM` and the decorators in this
+    module satisfy it too.
     """
 
     async def acreate[ResponseT: BaseModel](self, messages: Messages, response_model: type[ResponseT]) -> ResponseT:
@@ -171,7 +171,9 @@ class Throttled:
 class CallBudget:
     """A number of LLM calls, shared by every :class:`Budgeted` model that wraps it.
 
-    Spending is synchronous, so a budget is safe to share across tasks on one event loop.
+    A call is one validated response, however many model requests the backend makes for it:
+    validation retries and tool calls are part of the call. Spending is synchronous, so a budget is
+    safe to share across tasks on one event loop.
     """
 
     __slots__ = ("_max_calls", "_spent")

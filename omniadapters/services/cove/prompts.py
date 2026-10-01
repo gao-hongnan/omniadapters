@@ -1,8 +1,9 @@
-"""Prompts: how a brief becomes chat messages."""
+"""Prompts: how a brief becomes the messages a role is shown."""
 
 from __future__ import annotations
 
 import dataclasses
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, Self
 
 import jinja2
@@ -13,9 +14,19 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from openai.types.chat import ChatCompletionMessageParam
 
-type Messages = list[ChatCompletionMessageParam]
+@dataclass(frozen=True, slots=True)
+class Messages:
+    """What a role is shown on one call: a system message and a user message.
+
+    Two texts and nothing else, so every backend sends a prompt exactly as it was written. The
+    pydantic-ai backend makes ``system`` the run's instructions and ``user`` its prompt.
+    """
+
+    system: str
+    user: str
+
+
 type Prompt[BriefT] = Callable[[BriefT], Messages]
 
 # Prompts are plain text sent to an LLM, never HTML, so autoescaping would corrupt them.
@@ -60,10 +71,7 @@ class JinjaPrompt:
     def __call__(self, brief: object) -> Messages:
         """Render both templates against ``brief``'s fields."""
         values = _fields_of(brief)
-        return [
-            {"role": "system", "content": self._system.render(values)},
-            {"role": "user", "content": self._user.render(values)},
-        ]
+        return Messages(system=self._system.render(values), user=self._user.render(values))
 
 
 def _referenced(source: str) -> frozenset[str]:

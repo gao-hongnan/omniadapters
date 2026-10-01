@@ -22,6 +22,7 @@ from omniadapters.services.cove import (
     Disposition,
     Factored,
     Limits,
+    Messages,
     Reopen,
     Retrial,
     UnansweredReason,
@@ -35,7 +36,6 @@ if TYPE_CHECKING:
         CaseBrief,
         ContrarianBrief,
         JudgeBrief,
-        Messages,
         Step,
         StructuredLLM,
         WitnessBrief,
@@ -80,14 +80,11 @@ class CheckedInvoice:
 
 
 def extraction_prompt(brief: CaseBrief[InvoiceText]) -> Messages:
-    return [{"role": "system", "content": "Extract the vendor and the total."}, {"role": "user", "content": brief.case}]
+    return Messages(system="Extract the vendor and the total.", user=brief.case)
 
 
 def total_prompt(source: InvoiceText) -> Messages:
-    return [
-        {"role": "system", "content": "Copy the total due exactly as printed."},
-        {"role": "user", "content": source},
-    ]
+    return Messages(system="Copy the total due exactly as printed.", user=source)
 
 
 async def claim_every_field(brief: ContrarianBrief[InvoiceText, Invoice]) -> tuple[FieldClaim, ...]:

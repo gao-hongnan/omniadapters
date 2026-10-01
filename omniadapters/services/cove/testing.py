@@ -10,8 +10,6 @@ from pydantic import BaseModel
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from openai.types.chat import ChatCompletionMessageParam
-
     from .prompts import Messages
 
 
@@ -19,13 +17,13 @@ if TYPE_CHECKING:
 class RecordedCall:
     """One call a :class:`ScriptedLLM` received."""
 
-    messages: tuple[ChatCompletionMessageParam, ...]
+    messages: Messages
     response_model: type[BaseModel]
 
     @property
     def text(self) -> str:
-        """Every text message's content, joined by newlines: what the role was shown."""
-        return "\n".join(content for message in self.messages if isinstance(content := message.get("content"), str))
+        """The system and user messages, joined by a newline: everything the role was shown."""
+        return f"{self.messages.system}\n{self.messages.user}"
 
 
 type Script = Callable[[RecordedCall], BaseModel]
@@ -63,7 +61,7 @@ class ScriptedLLM:
             If the script answers with an instance of the wrong response model.
 
         """
-        call = RecordedCall(messages=tuple(messages), response_model=response_model)
+        call = RecordedCall(messages=messages, response_model=response_model)
         self._calls.append(call)
         reply = self._script(call)
         if not isinstance(reply, response_model):

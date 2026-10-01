@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
 from pydantic import BaseModel
@@ -16,6 +16,7 @@ from omniadapters.services.cove import (
     Factored,
     JinjaPrompt,
     Limits,
+    Messages,
     QuorumNotMetError,
     Role,
     StepFailedError,
@@ -29,8 +30,9 @@ from tests.unit.services.cove._toy import InFlight, contrarian_raising, toy_cove
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from omniadapters.services.cove import Messages
     from omniadapters.services.cove.testing import RecordedCall
+
+_GREETING: Final = Messages(system="Reply politely.", user="hi")
 
 
 class _Reply(BaseModel):
@@ -58,7 +60,7 @@ class _SlowLLM:
         self._in_flight = in_flight
 
     async def acreate[ResponseT: BaseModel](self, messages: Messages, response_model: type[ResponseT]) -> ResponseT:
-        await self._in_flight.hold(str(len(messages)))
+        await self._in_flight.hold(messages.user)
         return response_model.model_validate({"text": "slow"})
 
 
@@ -79,7 +81,7 @@ class TestLLMStep:
         assert result == "YOU CHECK CAPITALS.\nCANBERRA?"
         (call,) = llm.calls
         assert call.response_model is _Reply
-        assert [message["role"] for message in call.messages] == ["system", "user"]
+        assert call.messages == Messages(system="You check capitals.", user="Canberra?")
 
     @pytest.mark.asyncio
     async def test_without_parse_returns_the_response(self) -> None:
@@ -91,7 +93,7 @@ class TestLLMStep:
 
     def test_reports_template_variables_only_for_jinja_prompts(self) -> None:
         def typed_prompt(brief: _Brief) -> Messages:
-            return [{"role": "user", "content": brief.challenge}]
+            return Messages(system="Check the claim.", user=brief.challenge)
 
         jinja = llm_step(
             llm=ScriptedLLM(_echo), prompt=JinjaPrompt(system="s", user="{{ case }}"), response_model=_Reply
@@ -121,7 +123,7 @@ class TestJinjaPrompt:
     def test_renders_pydantic_model_briefs(self) -> None:
         messages = JinjaPrompt(system="s", user="{{ text }}")(_Reply(text="hello"))
 
-        assert messages[1] == {"role": "user", "content": "hello"}
+        assert messages == Messages(system="s", user="hello")
 
     def test_rejects_briefs_that_are_not_records(self) -> None:
         with pytest.raises(TypeError, match="dataclass or pydantic model"):
@@ -133,10 +135,7 @@ class TestJinjaPrompt:
 
         prompt = JinjaPrompt.from_files(tmp_path, system="system.j2", user="user.j2")
 
-        assert prompt(_Brief(case="facts", challenge="why?")) == [
-            {"role": "system", "content": "Check facts."},
-            {"role": "user", "content": "why?"},
-        ]
+        assert prompt(_Brief(case="facts", challenge="why?")) == Messages(system="Check facts.", user="why?")
 
 
 @pytest.mark.unit
@@ -149,7 +148,7 @@ class TestThrottled:
         first = Throttled(inner=_SlowLLM(in_flight), limiter=limiter)
         second = Throttled(inner=_SlowLLM(in_flight), limiter=limiter)
 
-        await asyncio.gather(*(llm.acreate([], _Reply) for llm in (first, second) for _ in range(4)))
+        await asyncio.gather(*(llm.acreate(_GREETING, _Reply) for llm in (first, second) for _ in range(4)))
 
         assert in_flight.peak == slots
 
@@ -162,10 +161,10 @@ class TestBudget:
         budget = CallBudget(max_calls=2)
         llm = Budgeted(inner=inner, budget=budget)
 
-        await llm.acreate([], _Reply)
-        await llm.acreate([], _Reply)
+        await llm.acreate(_GREETING, _Reply)
+        await llm.acreate(_GREETING, _Reply)
         with pytest.raises(BudgetExceededError) as caught:
-            await llm.acreate([], _Reply)
+            await llm.acreate(_GREETING, _Reply)
 
         assert len(inner.calls) == budget.max_calls
         assert budget.spent == budget.max_calls
@@ -194,7 +193,7 @@ class TestBudget:
         judge = llm_step(
             llm=llm, prompt=JinjaPrompt(system="s", user="{{ proposal }}"), response_model=_Reply, parse=str
         )
-        await llm.acreate([], _Reply)
+        await llm.acreate(_GREETING, _Reply)
 
         with pytest.raises(StepFailedError) as caught:
             await toy_cove(judge=judge, limits=Limits()).run("q")
@@ -210,9 +209,9 @@ class TestScriptedLLM:
         llm = ScriptedLLM(lambda _: _Other(value=1))
 
         with pytest.raises(TypeError, match="answered a _Reply request with a _Other"):
-            await llm.acreate([{"role": "user", "content": "hi"}], _Reply)
+            await llm.acreate(_GREETING, _Reply)
 
-        assert [call.text for call in llm.calls] == ["hi"]
+        assert [call.text for call in llm.calls] == ["Reply politely.\nhi"]
 
     @pytest.mark.asyncio
     async def test_is_usable_as_a_witness_through_llm_step(self) -> None:

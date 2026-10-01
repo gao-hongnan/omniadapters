@@ -12,6 +12,9 @@ judge. Critic's defects are fixed along the way:
 - The question bounds have **one owner**: :data:`MIN_CHALLENGES` and :data:`MAX_CHALLENGES` feed
   both the schema and the prompt.
 - Each role holds **one client**, opened once and closed on exit, instead of one client per call.
+
+From config, each role is a pydantic-ai agent (see :func:`open_factual_qa`); in code, any
+:class:`~omniadapters.services.cove.llm.StructuredLLM` can play a role (see :func:`build_factual_qa`).
 """
 
 from __future__ import annotations
@@ -25,6 +28,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..backends import RoleConfig, open_role
 from ..engine import ChainOfVerification
+from ..enums import Role
 from ..evidence import Answered, CrossExamined
 from ..limits import DEFAULT_LIMITS, Limits
 from ..llm import llm_step
@@ -370,13 +374,13 @@ async def open_factual_qa(
     prompts: FactualQAPrompts = DEFAULT_PROMPTS,
     observers: Sequence[Observer] = (),
 ) -> AsyncGenerator[FactualQA]:
-    """Open one client per role, build the recipe, and close every client on exit, even on error."""
+    """Open one agent per role, named after it, build the recipe, and close every agent on exit, even on error."""
     async with AsyncExitStack() as stack:
         roles = FactualQARoles(
-            proponent=await stack.enter_async_context(open_role(config.proponent)),
-            contrarian=await stack.enter_async_context(open_role(config.contrarian)),
-            witness=await stack.enter_async_context(open_role(config.witness)),
-            judge=await stack.enter_async_context(open_role(config.judge)),
+            proponent=await stack.enter_async_context(open_role(config.proponent, name=Role.PROPONENT)),
+            contrarian=await stack.enter_async_context(open_role(config.contrarian, name=Role.CONTRARIAN)),
+            witness=await stack.enter_async_context(open_role(config.witness, name=Role.WITNESS)),
+            judge=await stack.enter_async_context(open_role(config.judge, name=Role.JUDGE)),
         )
         yield build_factual_qa(
             roles, procedure=config.procedure, prompts=prompts, limits=config.limits, observers=observers
